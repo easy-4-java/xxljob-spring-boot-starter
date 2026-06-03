@@ -40,7 +40,8 @@ public class XxlJobTemplate {
 	protected XxlJobAdminProperties adminProperties;
 	protected XxlJobExecutorProperties executorProperties;
 
-	private volatile boolean loggedIn = false;
+	private final Object loginLock = new Object();
+	private volatile boolean authenticated = false;
 
 	public XxlJobTemplate(UnirestInstance unirestInstance,
 						   XxlJobProperties properties,
@@ -61,7 +62,13 @@ public class XxlJobTemplate {
 	}
 
 	private void loginIfNeed() {
-		if (!loggedIn) {
+		if (authenticated) {
+			return;
+		}
+		synchronized (loginLock) {
+			if (authenticated) {
+				return;
+			}
 			this.login(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember());
 		}
 	}
@@ -77,14 +84,15 @@ public class XxlJobTemplate {
 					.asString();
 			if (response.isSuccess()) {
 				log.info("xxl-job login success.");
-				loggedIn = true;
+				authenticated = true;
 				return new ReturnT<String>(response.getBody());
 			}
 			log.error("xxl-job login fail. status:{}", response.getStatus());
-			loggedIn = false;
+			authenticated = false;
 			return new ReturnT<String>(ReturnT.FAIL_CODE, response.getStatusText());
 		} catch (Exception e) {
 			log.error("xxl-job login error.", e);
+			authenticated = false;
 			return new ReturnT<String>(ReturnT.FAIL_CODE, e.getMessage());
 		}
 	}
@@ -97,7 +105,7 @@ public class XxlJobTemplate {
 					.asString();
 			if (response.isSuccess()) {
 				log.info("xxl-job logout success.");
-				loggedIn = false;
+				authenticated = false;
 				return ReturnT.SUCCESS;
 			}
 			log.error("xxl-job logout fail.");
