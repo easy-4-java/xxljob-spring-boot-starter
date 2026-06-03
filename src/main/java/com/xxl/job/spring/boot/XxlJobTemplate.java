@@ -61,15 +61,16 @@ public class XxlJobTemplate {
 		return address + suffix;
 	}
 
-	private void loginIfNeed() {
+	private boolean loginIfNeed() {
 		if (authenticated) {
-			return;
+			return true;
 		}
 		synchronized (loginLock) {
 			if (authenticated) {
-				return;
+				return true;
 			}
-			this.login(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember());
+			ReturnT<String> result = this.login(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember());
+			return result.getCode() == ReturnT.SUCCESS_CODE;
 		}
 	}
 
@@ -118,7 +119,10 @@ public class XxlJobTemplate {
 	private HttpResponse<String> doPost(String suffix, Map<String, Object> paramMap, boolean isLoginRequest) {
 		String url = buildUrl(suffix);
 		if (!isLoginRequest) {
-			loginIfNeed();
+			if (!loginIfNeed()) {
+				log.error("xxl-job login failed, cannot execute request.");
+				throw new RuntimeException("xxl-job login failed before request: " + suffix);
+			}
 		}
 		return unirestInstance.post(url)
 				.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
@@ -294,6 +298,19 @@ public class XxlJobTemplate {
 		return doRequest(XxlJobConstants.JOBINFO_TRIGGER, paramMap);
 	}
 
+	private String errorMsg(HttpResponse<String> response) {
+		String statusText = response.getStatusText();
+		if (statusText != null && !statusText.isEmpty()) {
+			return "HTTP " + response.getStatus() + " " + statusText;
+		}
+		// HTTP/2 无 reason phrase，用响应体代替
+		String body = response.getBody();
+		if (body != null && !body.isEmpty()) {
+			return "HTTP " + response.getStatus() + ", body: " + body.substring(0, Math.min(body.length(), 200));
+		}
+		return "HTTP " + response.getStatus();
+	}
+
 	private <T> ReturnT<T> doRequest(String suffix, Map<String, Object> paramMap) {
 		try {
 			HttpResponse<String> response = doPost(suffix, paramMap, false);
@@ -302,12 +319,13 @@ public class XxlJobTemplate {
 				String body = response.getBody();
 				log.debug("xxl-job response body: {} .", body);
 				if (isResponseJson(response)) {
-					ReturnT<T> returnT = JSON.parseObject(body, new TypeReference<ReturnT<T>>() {});
-					return returnT;
+					return JSON.parseObject(body, new TypeReference<ReturnT<T>>() {});
 				}
+				// 非 JSON 响应通常是登录失败或重定向
+				log.error("xxl-job request returned non-JSON response. url suffix:{}, body:{}", suffix, body);
 			}
-			log.error("xxl-job request fail. status:{}", response.getStatus());
-			return new ReturnT<>(ReturnT.FAIL_CODE, response.getStatusText());
+			log.error("xxl-job request fail. suffix:{} {}", suffix, errorMsg(response));
+			return new ReturnT<>(ReturnT.FAIL_CODE, errorMsg(response));
 		} catch (Exception e) {
 			return new ReturnT<>(ReturnT.FAIL_CODE, e.getMessage());
 		}
@@ -324,9 +342,10 @@ public class XxlJobTemplate {
 					T rt = JSON.parseObject(body, objectClass);
 					return new ReturnT<>(rt);
 				}
+				log.error("xxl-job request returned non-JSON response. url suffix:{}, body:{}", suffix, body);
 			}
-			log.error("xxl-job request fail. status:{}", response.getStatus());
-			return new ReturnT<>(ReturnT.FAIL_CODE, response.getStatusText());
+			log.error("xxl-job request fail. suffix:{} {}", suffix, errorMsg(response));
+			return new ReturnT<>(ReturnT.FAIL_CODE, errorMsg(response));
 		} catch (Exception e) {
 			return new ReturnT<>(ReturnT.FAIL_CODE, e.getMessage());
 		}
@@ -346,9 +365,10 @@ public class XxlJobTemplate {
 					T result = JSON.parseObject(body, objectClass);
 					return new ReturnT<>(result);
 				}
+				log.error("xxl-job pageList returned non-JSON response. url suffix:{}, body:{}", suffix, body);
 			}
-			log.error("xxl-job pageList request fail. status:{}", response.getStatus());
-			return new ReturnT<>(ReturnT.FAIL_CODE, response.getStatusText());
+			log.error("xxl-job pageList request fail. suffix:{} {}", suffix, errorMsg(response));
+			return new ReturnT<>(ReturnT.FAIL_CODE, errorMsg(response));
 		} catch (Exception e) {
 			return new ReturnT<>(ReturnT.FAIL_CODE, e.getMessage());
 		}
