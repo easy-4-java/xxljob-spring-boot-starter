@@ -572,8 +572,9 @@ public class XxlJobTemplate {
 		String address;
 		if (!adminProperties.getAddresses().endsWith(str)) {
 			address = adminProperties.getAddresses() + str + suffix;
+		} else {
+			address = adminProperties.getAddresses() + suffix;
 		}
-		address = adminProperties.getAddresses() + suffix;
 		return address;
 	}
 

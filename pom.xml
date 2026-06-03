@@ -386,6 +386,7 @@
 		<fastjson2.version>2.0.53</fastjson2.version>
 		<okhttp3.version>3.14.9</okhttp3.version>
 		<xxl-job.version>2.4.0</xxl-job.version>
+		<lombok.version>1.18.36</lombok.version>
 	</properties>
 
 	<dependencyManagement>
@@ -419,6 +420,7 @@
 		<dependency>
 		    <groupId>org.projectlombok</groupId>
 		    <artifactId>lombok</artifactId>
+		    <version>${lombok.version}</version>
 		    <scope>compile</scope>
 		</dependency>
 
