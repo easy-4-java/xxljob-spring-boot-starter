@@ -40,7 +40,8 @@ public class XxlJobTemplate {
 	protected XxlJobAdminProperties adminProperties;
 	protected XxlJobExecutorProperties executorProperties;
 
-	private volatile boolean loggedIn = false;
+	private final Object loginLock = new Object();
+	private volatile boolean authenticated = false;
 
 	public XxlJobTemplate(UnirestInstance unirestInstance,
 						   XxlJobProperties properties,
@@ -60,8 +61,18 @@ public class XxlJobTemplate {
 		return address + suffix;
 	}
 
+	/**
+	 * Unirest 通过 enableCookieManagement(true) 自动管理 cookie。
+	 * 登录后 cookie 在整个 UnirestInstance 生命周期内自动复用。
+	 */
 	private void loginIfNeed() {
-		if (!loggedIn) {
+		if (authenticated) {
+			return;
+		}
+		synchronized (loginLock) {
+			if (authenticated) {
+				return;
+			}
 			this.login(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember());
 		}
 	}
@@ -77,15 +88,16 @@ public class XxlJobTemplate {
 					.asString();
 			if (response.isSuccess()) {
 				log.info("xxl-job login success.");
-				loggedIn = true;
+				authenticated = true;
 				return Response.ofSuccess(response.getBody());
 			}
 			log.error("xxl-job login fail. status:{}", response.getStatus());
-			loggedIn = false;
-			return Response.ofFail( response.getStatusText());
+			authenticated = false;
+			return Response.ofFail(response.getStatusText());
 		} catch (Exception e) {
 			log.error("xxl-job login error.", e);
-			return Response.ofFail( e.getMessage());
+			authenticated = false;
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
@@ -97,13 +109,13 @@ public class XxlJobTemplate {
 					.asString();
 			if (response.isSuccess()) {
 				log.info("xxl-job logout success.");
-				loggedIn = false;
+				authenticated = false;
 				return Response.ofSuccess();
 			}
 			log.error("xxl-job logout fail.");
-			return Response.ofFail( response.getStatusText());
+			return Response.ofFail(response.getStatusText());
 		} catch (Exception e) {
-			return Response.ofFail( e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
@@ -138,7 +150,7 @@ public class XxlJobTemplate {
 
 	public Response<XxlJobGroup> jobInfoGroup(Integer jobGroupId) {
 		if (Objects.isNull(jobGroupId)) {
-			return Response.ofFail( "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
@@ -147,7 +159,7 @@ public class XxlJobTemplate {
 
 	public Response<String> addJobGroup(XxlJobGroup jobGroup) {
 		if (Objects.isNull(jobGroup)) {
-			return Response.ofFail( "任务执行器信息不能为空");
+			return Response.ofFail("任务执行器信息不能为空");
 		}
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobGroup), Map.class);
 		return doRequest(XxlJobConstants.JOBGROUP_SAVE, paramMap);
@@ -160,7 +172,7 @@ public class XxlJobTemplate {
 
 	public Response<String> removeJobGroup(Integer jobGroupId) {
 		if (Objects.isNull(jobGroupId)) {
-			return Response.ofFail( "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
@@ -178,7 +190,7 @@ public class XxlJobTemplate {
 	public Response<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup,
 											   Integer triggerStatus, String jobDesc, String executorHandler, String author) {
 		if (Objects.isNull(jobGroup)) {
-			return Response.ofFail( "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(7);
 		paramMap.put("start", Math.max(0, start));
@@ -193,14 +205,14 @@ public class XxlJobTemplate {
 
 	public Response<String> addUniqueJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return Response.ofFail( "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		if (Objects.isNull(jobInfo.getJobGroup())) {
-			return Response.ofFail( "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
 		Response<XxlJobInfoList> returnT1 = this.jobInfoList(0, Integer.MAX_VALUE, jobInfo.getJobGroup());
 		if (!returnT1.isSuccess()) {
-			return Response.ofFail( "获取任务列表失败，失败原因:" + returnT1.getMsg());
+			return Response.ofFail("获取任务列表失败，失败原因:" + returnT1.getMsg());
 		}
 		XxlJobInfoList jobInfoList = returnT1.getData();
 		if (Objects.isNull(jobInfoList) || CollectionUtils.isEmpty(jobInfoList.getData())) {
@@ -209,20 +221,20 @@ public class XxlJobTemplate {
 		StringUtils.trimWhitespace(jobInfo.getJobDesc());
 		if (jobInfoList.getData().stream().anyMatch(job -> StringUtils.trimWhitespace(job.getJobDesc())
 				.equals(StringUtils.trimWhitespace(jobInfo.getJobDesc())))) {
-			return Response.ofFail( "任务组内已存在相同描述的任务");
+			return Response.ofFail("任务组内已存在相同描述的任务");
 		}
 		return this.addJob(jobInfo);
 	}
 
 	public Response<String> addJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return Response.ofFail( "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		if (Objects.isNull(jobInfo.getJobGroup())) {
-			return Response.ofFail( "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
 		if (Objects.isNull(jobInfo.getJobDesc())) {
-			return Response.ofFail( "任务描述不能为空");
+			return Response.ofFail("任务描述不能为空");
 		}
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
 		return doRequest(XxlJobConstants.JOBINFO_ADD, paramMap);
@@ -230,13 +242,13 @@ public class XxlJobTemplate {
 
 	public Response<String> updateJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return Response.ofFail( "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		if (Objects.isNull(jobInfo.getId())) {
-			return Response.ofFail( "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
 		if (Objects.isNull(jobInfo.getJobDesc())) {
-			return Response.ofFail( "任务描述不能为空");
+			return Response.ofFail("任务描述不能为空");
 		}
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
 		return doRequest(XxlJobConstants.JOBINFO_UPDATE, paramMap);
@@ -244,7 +256,7 @@ public class XxlJobTemplate {
 
 	public Response<String> removeJob(Integer jobId) {
 		if (Objects.isNull(jobId)) {
-			return Response.ofFail( "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
@@ -253,7 +265,7 @@ public class XxlJobTemplate {
 
 	public Response<String> stopJob(Integer jobId) {
 		if (Objects.isNull(jobId)) {
-			return Response.ofFail( "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
@@ -262,7 +274,7 @@ public class XxlJobTemplate {
 
 	public Response<String> startJob(Integer jobId) {
 		if (Objects.isNull(jobId)) {
-			return Response.ofFail( "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
@@ -271,14 +283,14 @@ public class XxlJobTemplate {
 
 	public Response<String> triggerJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return Response.ofFail( "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		return this.triggerJob(jobInfo.getId(), jobInfo.getExecutorParam());
 	}
 
 	public Response<String> triggerJob(Integer jobInfoId, String executorParam) {
 		if (Objects.isNull(jobInfoId)) {
-			return Response.ofFail( "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
 		Map<String, Object> paramMap = new HashMap<>(2);
 		paramMap.put("id", jobInfoId);
@@ -299,9 +311,9 @@ public class XxlJobTemplate {
 				}
 			}
 			log.error("xxl-job request fail. status:{}", response.getStatus());
-			return Response.ofFail( response.getStatusText());
+			return Response.ofFail(response.getStatusText());
 		} catch (Exception e) {
-			return Response.ofFail( e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
@@ -318,15 +330,12 @@ public class XxlJobTemplate {
 				}
 			}
 			log.error("xxl-job request fail. status:{}", response.getStatus());
-			return Response.ofFail( response.getStatusText());
+			return Response.ofFail(response.getStatusText());
 		} catch (Exception e) {
-			return Response.ofFail( e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
-	/**
-	 * 处理 pageList 接口返回的非 Response 包装的响应（直接是 Map 格式）
-	 */
 	private <T> Response<T> doRequestForPageList(String suffix, Map<String, Object> paramMap, Class<T> objectClass) {
 		try {
 			HttpResponse<String> response = doPost(suffix, paramMap, false);
@@ -340,9 +349,9 @@ public class XxlJobTemplate {
 				}
 			}
 			log.error("xxl-job pageList request fail. status:{}", response.getStatus());
-			return Response.ofFail( response.getStatusText());
+			return Response.ofFail(response.getStatusText());
 		} catch (Exception e) {
-			return Response.ofFail( e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
