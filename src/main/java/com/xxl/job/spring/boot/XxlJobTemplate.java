@@ -15,8 +15,8 @@
  */
 package com.xxl.job.spring.boot;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.TypeReference;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.TypeReference;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
@@ -27,16 +27,15 @@ import okhttp3.*;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 public class XxlJobTemplate {
 
+	public final static String EMPTY = "";
 	public final static String APPLICATION_JSON_VALUE = "application/json";
 	public final static String APPLICATION_JSON_UTF8_VALUE = "application/json;charset=UTF-8";
 	public final static okhttp3.MediaType APPLICATION_JSON = okhttp3.MediaType.parse(APPLICATION_JSON_VALUE);
@@ -49,7 +48,7 @@ public class XxlJobTemplate {
 
 	public XxlJobTemplate( OkHttpClient okhttp3Client,
 						   XxlJobProperties properties,
-			XxlJobAdminProperties adminProperties, 
+			XxlJobAdminProperties adminProperties,
 			XxlJobExecutorProperties executorProperties) {
 		this.okhttp3Client = okhttp3Client;
 		this.properties = properties;
@@ -94,7 +93,8 @@ public class XxlJobTemplate {
 
 	/**
 	 * 退出登录
-	 * @return
+	 * @return ReturnT 返回结果
+	 * @throws IOException IO异常
 	 */
 	public ReturnT<String> logout() throws IOException {
 		// xxl-job admin 请求参数
@@ -116,13 +116,24 @@ public class XxlJobTemplate {
 		return new ReturnT<String>(ReturnT.FAIL_CODE, response.toString());
 	}
 
+
+	/**
+	 * 获取xxl-job 执行器列表数据
+	 * @param start	起始位置
+	 * @param length 数量
+	 * @return ReturnT 返回结果
+	 */
+	public ReturnT<XxlJobGroupList> jobInfoGroupList(int start, int length) {
+		return this.jobInfoGroupList(start, length, EMPTY, EMPTY);
+	}
+
 	/**
 	 * 获取xxl-job 执行器列表数据
 	 * @param start	起始位置
 	 * @param length 数量
 	 * @param appname 执行器名称
 	 * @param title 执行器标题
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<XxlJobGroupList> jobInfoGroupList(int start, int length, String appname, String title) {
 		// xxl-job admin 请求参数
@@ -141,9 +152,12 @@ public class XxlJobTemplate {
 	/**
 	 * 获取调度任务组
 	 * @param jobGroupId 调度任务组ID
-	 * @return ReturnT
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<XxlJobGroup> jobInfoGroup(Integer jobGroupId) {
+		if ( Objects.isNull(jobGroupId)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
@@ -157,9 +171,12 @@ public class XxlJobTemplate {
 	/**
 	 * 添加调度任务组
 	 * @param jobGroup 调度任务组信息Model
-	 * @return	ReturnT
+	 * @return	ReturnT 返回结果
 	 */
 	public ReturnT<String> addJobGroup(XxlJobGroup jobGroup) {
+		if ( Objects.isNull(jobGroup)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器信息不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobGroup), Map.class);
 		// xxl-job admin 请求体
@@ -172,7 +189,7 @@ public class XxlJobTemplate {
 	/**
 	 * 更新调度任务组
 	 * @param jobGroup 调度任务组信息Model
-	 * @return ReturnT
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<String> updateJobGroup(XxlJobGroup jobGroup) {
 		// xxl-job admin 请求参数
@@ -187,9 +204,12 @@ public class XxlJobTemplate {
 	/**
 	 * 删除调度任务组
 	 * @param jobGroupId 调度任务组ID
-	 * @return	ReturnT
+	 * @return	ReturnT 返回结果
 	 */
 	public ReturnT<String> removeJobGroup(Integer jobGroupId) {
+		if ( Objects.isNull(jobGroupId)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
@@ -205,10 +225,10 @@ public class XxlJobTemplate {
 	 * @param start	起始位置
 	 * @param length 数量
 	 * @param jobGroup 执行器主键ID
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup) {
-		return this.jobInfoList(start, length, jobGroup, -1, null, null, null);
+		return this.jobInfoList(start, length, jobGroup, -1, EMPTY, EMPTY, EMPTY);
 	}
 
 	/**
@@ -217,10 +237,10 @@ public class XxlJobTemplate {
 	 * @param length 数量
 	 * @param jobGroup 执行器主键ID
 	 * @param triggerStatus 调度状态：0-停止，1-运行
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
     public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup, Integer triggerStatus) {
-    	return this.jobInfoList(start, length, jobGroup, triggerStatus, "", "", "");
+    	return this.jobInfoList(start, length, jobGroup, triggerStatus, EMPTY, EMPTY, EMPTY);
 	}
 
 	/**
@@ -232,10 +252,13 @@ public class XxlJobTemplate {
 	 * @param jobDesc 任务描述
 	 * @param executorHandler 执行器任务handler
 	 * @param author 任务创建者
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
     public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup,
 											   Integer triggerStatus, String jobDesc, String executorHandler, String author) {
+		if ( Objects.isNull(jobGroup)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(7);
 		paramMap.put("start", Math.max(0, start));
@@ -253,12 +276,54 @@ public class XxlJobTemplate {
 	}
 
 	/**
+	 * 新增不重复的调度任务
+	 * @param jobInfo 调用任务信息Model
+	 * @return 任务id
+	 * @return ReturnT 返回结果
+	 */
+	public ReturnT<String> addUniqueJob(XxlJobInfo jobInfo) {
+		if (Objects.isNull(jobInfo)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+		}
+		if ( Objects.isNull(jobInfo.getJobGroup())) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+		}
+		// 1、查询任务组内是否存在相同的任务
+		ReturnT<XxlJobInfoList> returnT1 = this.jobInfoList(0, Integer.MAX_VALUE, jobInfo.getJobGroup());
+		if (returnT1.getCode() == ReturnT.FAIL_CODE) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "获取任务列表失败，失败原因:" + returnT1.getMsg());
+		}
+		XxlJobInfoList jobInfoList = returnT1.getContent();
+		// 2、如果任务组内不存在任何的任务，则新增任务
+		if(Objects.isNull(jobInfoList) || CollectionUtils.isEmpty(jobInfoList.getData())) {
+			return this.addJob(jobInfo);
+		}
+		StringUtils.trimWhitespace(jobInfo.getJobDesc());
+		// 3、如果任务组内存在相同的任务，则不新增任务
+		if(jobInfoList.getData().stream().anyMatch(job -> StringUtils.trimWhitespace(job.getJobDesc())
+				.equals(StringUtils.trimWhitespace(jobInfo.getJobDesc())))) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务组内已存在相同描述的任务");
+		}
+		// 4、新增任务
+		return this.addJob(jobInfo);
+	}
+
+	/**
 	 * 新增调度任务
 	 * @param jobInfo 调用任务信息Model
 	 * @return 任务id
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<String> addJob(XxlJobInfo jobInfo) {
+		if (Objects.isNull(jobInfo)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+		}
+		if ( Objects.isNull(jobInfo.getJobGroup())) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+		}
+		if ( Objects.isNull(jobInfo.getJobDesc())) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务描述不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
 		// xxl-job admin 请求体
@@ -271,9 +336,18 @@ public class XxlJobTemplate {
 	/**
 	 * 修改调度任务
 	 * @param jobInfo 调用任务信息Model
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
     public ReturnT<String> updateJob(XxlJobInfo jobInfo) {
+		if (Objects.isNull(jobInfo)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+		}
+		if ( Objects.isNull(jobInfo.getId())) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+		}
+		if ( Objects.isNull(jobInfo.getJobDesc())) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务描述不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
 		// xxl-job admin 请求体
@@ -286,9 +360,12 @@ public class XxlJobTemplate {
 	/**
 	 * 删除调度任务
 	 * @param jobId 任务id
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
     public ReturnT<String> removeJob(Integer jobId) {
+		if ( Objects.isNull(jobId)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
@@ -302,9 +379,12 @@ public class XxlJobTemplate {
 	/**
 	 * 停止调度
 	 * @param jobId 任务id
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
     public ReturnT<String> stopJob(Integer jobId) {
+		if ( Objects.isNull(jobId)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
@@ -318,9 +398,12 @@ public class XxlJobTemplate {
 	/**
 	 * 开启调度
 	 * @param jobId 任务id
-	 * @return
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<String> startJob(Integer jobId) {
+		if ( Objects.isNull(jobId)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
@@ -335,9 +418,12 @@ public class XxlJobTemplate {
 	 *
 	 * 手动触发一次调度
 	 * @param jobInfo 调用任务信息Model
-	 * @return ReturnT
+	 * @return ReturnT 返回结果
 	 */
 	public ReturnT<String> triggerJob(XxlJobInfo jobInfo) {
+		if (Objects.isNull(jobInfo)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+		}
 		return this.triggerJob(jobInfo.getId(), jobInfo.getExecutorParam());
 	}
 
@@ -345,9 +431,12 @@ public class XxlJobTemplate {
 	 * 手动触发一次调度
 	 * @param jobInfoId 调用任务ID
 	 * @param executorParam 执行器参数
-	 * @return ReturnT
+	 * @return ReturnT 返回结果
 	 */
     public ReturnT<String> triggerJob(Integer jobInfoId, String executorParam) {
+		if ( Objects.isNull(jobInfoId)) {
+			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+		}
 		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(2);
 		paramMap.put("id", jobInfoId);
@@ -359,10 +448,23 @@ public class XxlJobTemplate {
 		return this.doRequest(request);
     }
 
+	/**
+	 * 构建请求实体
+	 * @param url 调用任务URL
+	 * @param paramMap 执行器参数
+	 * @return ReturnT 返回结果
+	 */
 	private Request buildRequestEntity(String url, Map<String, Object> paramMap) {
 		return this.buildRequestEntity(url, paramMap, false);
 	}
-	
+
+	/**
+	 * 构建请求实体
+	 * @param url 调用任务URL
+	 * @param paramMap 执行器参数
+	 * @param isLoginRequest 是否登录请求
+	 * @return ReturnT 返回结果
+	 */
 	private Request buildRequestEntity(String url, Map<String, Object> paramMap, boolean isLoginRequest) {
 
 		// xxl-job admin 请求头
@@ -470,9 +572,10 @@ public class XxlJobTemplate {
 		String address;
 		if (!adminProperties.getAddresses().endsWith(str)) {
 			address = adminProperties.getAddresses() + str + suffix;
+		} else {
+			address = adminProperties.getAddresses() + suffix;
 		}
-		address = adminProperties.getAddresses() + suffix;
 		return address;
 	}
-	    
+
 }

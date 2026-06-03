@@ -24,8 +24,6 @@ import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;
 import com.xxl.job.spring.boot.model.XxlJobInfoList;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -41,26 +39,32 @@ import java.util.*;
 
 /**
  * Xxl Job Handler 自动注册
- * @author 		： <a href="https://github.com/hiwepy">wandl</a>
+ * <p>
+ * 支持两种扫描模式：
+ * 1. @XxlJob + @XxlJobCron 组合使用（兼容旧写法）
+ * 2. @XxlJobCron 独立使用（推荐，100% 替代 @XxlJob）
+ * </p>
+ *
+ * @author ： <a href="https://github.com/hiwepy">wandl</a>
  */
 @Slf4j
 public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
-	
-	private XxlJobTemplate xxlJobTemplate;
+
+    private XxlJobTemplate xxlJobTemplate;
     private String appName;
     private String appTitle;
-	private List<XxlJobInfo> cacheJobs = new ArrayList<>();
-	private Random RANDOM_ORDER = new Random(10);
-	
-	public XxlJobAutoBindingSpringExecutor(XxlJobTemplate xxlJobTemplate) {
-        this.xxlJobTemplate = xxlJobTemplate;
-	}
+    private List<XxlJobInfo> cacheJobs = new ArrayList<>();
+    private Random RANDOM_ORDER = new Random(10);
 
-	@Override
-	public void setAppname(String appName) {
-		super.setAppname(appName);
-		this.appName = appName;
-	}
+    public XxlJobAutoBindingSpringExecutor(XxlJobTemplate xxlJobTemplate) {
+        this.xxlJobTemplate = xxlJobTemplate;
+    }
+
+    @Override
+    public void setAppname(String appName) {
+        super.setAppname(appName);
+        this.appName = appName;
+    }
 
     public void setAppTitle(String appTitle) {
         this.appTitle = appTitle;
@@ -69,9 +73,6 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
     // start
     @Override
     public void afterSingletonsInstantiated() {
-
-        // init JobHandler Repository
-        /*initJobHandlerRepository(applicationContext);*/
 
         // init JobHandler Repository (for method)
         initJobHandlerMethodRepository(applicationContext);
@@ -98,17 +99,19 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             // get bean
             Object bean = null;
             Lazy onBean = applicationContext.findAnnotationOnBean(beanDefinitionName, Lazy.class);
-            if (onBean!=null){
+            if (onBean != null) {
                 log.debug("xxl-job annotation scan, skip @Lazy Bean:{}", beanDefinitionName);
                 continue;
-            }else {
+            } else {
                 bean = applicationContext.getBean(beanDefinitionName);
             }
 
-            // filter method
-            Map<Method, XxlJob> annotatedMethods = null;   // referred to ：org.springframework.context.event.EventListenerMethodProcessor.processBean
+            // ============================================================
+            // 扫描 @XxlJob 注解
+            // ============================================================
+            Map<Method, XxlJob> xxlJobMethods = null;
             try {
-                annotatedMethods = MethodIntrospector.selectMethods(bean.getClass(),
+                xxlJobMethods = MethodIntrospector.selectMethods(bean.getClass(),
                         new MethodIntrospector.MetadataLookup<XxlJob>() {
                             @Override
                             public XxlJob inspect(Method method) {
@@ -118,56 +121,102 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             } catch (Throwable ex) {
                 log.error("xxl-job method-jobhandler resolve error for bean[" + beanDefinitionName + "].", ex);
             }
-            if (annotatedMethods==null || annotatedMethods.isEmpty()) {
+
+            // ============================================================
+            // 扫描 @XxlJobCron 注解（独立使用，100% 替代 @XxlJob）
+            // ============================================================
+            Map<Method, XxlJobCron> xxlJobCronMethods = null;
+            try {
+                xxlJobCronMethods = MethodIntrospector.selectMethods(bean.getClass(),
+                        new MethodIntrospector.MetadataLookup<XxlJobCron>() {
+                            @Override
+                            public XxlJobCron inspect(Method method) {
+                                return AnnotationUtils.findAnnotation(method, XxlJobCron.class);
+                            }
+                        });
+            } catch (Throwable ex) {
+                log.error("xxl-job XxlJobCron resolve error for bean[" + beanDefinitionName + "].", ex);
+            }
+
+            // 合并两种模式的结果
+            Set<Method> allMethods = new LinkedHashSet<>();
+            if (xxlJobMethods != null) {
+                allMethods.addAll(xxlJobMethods.keySet());
+            }
+            if (xxlJobCronMethods != null) {
+                allMethods.addAll(xxlJobCronMethods.keySet());
+            }
+
+            if (allMethods.isEmpty()) {
                 continue;
             }
 
             // generate and regist method job handler
-            for (Map.Entry<Method, XxlJob> methodXxlJobEntry : annotatedMethods.entrySet()) {
-                Method executeMethod = methodXxlJobEntry.getKey();
-                XxlJob xxlJob = methodXxlJobEntry.getValue();
-                // regist
-                registJobHandler(xxlJob, bean, executeMethod);
-                registJobHandlerCronTask(xxlJob, bean, executeMethod);
-            }
+            for (Method executeMethod : allMethods) {
 
-            registJobHandlerCronTaskToAdmin();
+                XxlJob xxlJob = (xxlJobMethods != null) ? xxlJobMethods.get(executeMethod) : null;
+                XxlJobCron xxlJobCron = (xxlJobCronMethods != null) ? xxlJobCronMethods.get(executeMethod) : null;
+
+                // 获取 JobHandler 名称
+                String handlerName = resolveHandlerName(xxlJob, xxlJobCron);
+                if (!StringUtils.hasText(handlerName)) {
+                    continue;
+                }
+
+                // regist job handler (通过父类方法注册到执行器)
+                registJobHandler(xxlJob, bean, executeMethod);
+                // regist cron task info (for auto-binding to admin)
+                registJobHandlerCronTaskInfo(handlerName, xxlJobCron, bean, executeMethod);
+            }
 
         }
+
+        // 所有 Bean 扫描完毕后，统一向 Admin 注册定时任务
+        registJobHandlerCronTaskToAdmin();
     }
 
-    private void registJobHandlerCronTask(XxlJob xxlJob, Object bean, Method executeMethod) {
+    /**
+     * 解析 JobHandler 名称
+     * 优先级：@XxlJobCron.value() > @XxlJob.value()
+     */
+    private String resolveHandlerName(XxlJob xxlJob, XxlJobCron xxlJobCron) {
+        // 优先使用 @XxlJobCron.value()
+        if (xxlJobCron != null && StringUtils.hasText(xxlJobCron.value())) {
+            return xxlJobCron.value();
+        }
+        // 其次使用 @XxlJob.value()
+        if (xxlJob != null && StringUtils.hasText(xxlJob.value())) {
+            return xxlJob.value();
+        }
+        return null;
+    }
+
+    /**
+     * 注册定时任务信息到 Admin（支持 @XxlJobCron 独立使用或与 @XxlJob 组合使用）
+     */
+    private void registJobHandlerCronTaskInfo(String handlerName, XxlJobCron xxlJobCron, Object bean, Method executeMethod) {
         try {
-
-            String name = xxlJob.value();
-            if (!StringUtils.hasText(name)) {
-                log.error("xxl-job method-jobhandler name invalid, for[" + bean.getClass() + "#" + executeMethod.getName() + "] .");
-                return;
-            }
-
-            XxlJobCron xxlJobCron = AnnotationUtils.findAnnotation(executeMethod, XxlJobCron.class);
-
-            if(Objects.isNull(xxlJobCron)) {
+            // 如果没有 @XxlJobCron 注解，不需要自动注册到 Admin
+            if (xxlJobCron == null) {
                 return;
             }
 
             XxlJobInfo xxlJobInfo = new XxlJobInfo();
-
             // 任务描述
             xxlJobInfo.setJobDesc(xxlJobCron.desc());
+            // 调度配置，值含义取决于调度类型
+            xxlJobInfo.setScheduleConf(xxlJobCron.cron());
+            xxlJobInfo.setJobCron(xxlJobCron.cron());
             // 负责人
             xxlJobInfo.setAuthor(xxlJobCron.author());
             // 报警邮件
             xxlJobInfo.setAlarmEmail(xxlJobCron.alarmEmail());
             // 调度类型
             xxlJobInfo.setScheduleType(xxlJobCron.scheduleType().name());
-            // Cron
-            xxlJobInfo.setScheduleConf(xxlJobCron.cron());
-            xxlJobInfo.setJobCron(xxlJobCron.cron());
             // 运行模式
             xxlJobInfo.setGlueType(xxlJobCron.glueType().name());
             // JobHandler
-            xxlJobInfo.setExecutorHandler(name);
+            xxlJobInfo.setExecutorHandler(handlerName);
             // 任务参数
             xxlJobInfo.setExecutorParam(xxlJobCron.param());
             // 路由策略
@@ -183,18 +232,17 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             // 是否自启动
             xxlJobInfo.setSelfStarting(xxlJobCron.selfStarting());
             cacheJobs.add(xxlJobInfo);
-        } catch (Exception ex){
+        } catch (Exception ex) {
             log.error(ex.getMessage());
         }
     }
 
     public void registJobHandlerCronTaskToAdmin() {
 
-
         try {
 
-           // 检查执行器是否存在
-            if(!StringUtils.hasText(appName)) {
+            // 检查执行器是否存在
+            if (!StringUtils.hasText(appName)) {
                 return;
             }
 
@@ -207,7 +255,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             // 执行器不存在则创建
             XxlJobGroupList jobGroupList = returnT1.getContent();
             Integer jobGroupId = null;
-            if(Objects.isNull(jobGroupList) || CollectionUtils.isEmpty(jobGroupList.getData())
+            if (Objects.isNull(jobGroupList) || CollectionUtils.isEmpty(jobGroupList.getData())
                     || jobGroupList.getData().stream().noneMatch(xxlJobGroup -> xxlJobGroup.getAppName().equals(appName))) {
                 log.info(">>>>>>>>>>> 执行器'{}'不存在，开始自动添加！", appName);
                 // 创建任务组对象
@@ -218,7 +266,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 xxlJobGroup.setTitle(appTitle);
                 ReturnT<String> returnT2 = getXxlJobTemplate().addJobGroup(xxlJobGroup);
                 if (returnT2.getCode() == ReturnT.FAIL_CODE) {
-                    log.error( ">>>>>>>>>>> 执行器'{}'添加添加失败!失败原因:{}", appName, returnT2.getMsg());
+                    log.error(">>>>>>>>>>> 执行器'{}'添加添加失败!失败原因:{}", appName, returnT2.getMsg());
                     return;
                 }
                 returnT1 = getXxlJobTemplate().jobInfoGroupList(0, Integer.MAX_VALUE, appName, null);
@@ -243,14 +291,14 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
                 xxlJobInfo.setJobGroup(jobGroupId);
 
-                log.info(">>>>>>>>>>> xxl-job cron task register jobhandler, name:{}, cron :{}", xxlJobInfo.getExecutorHandler(), xxlJobInfo.getScheduleConf());
+                log.info(">>>>>>>>>>> xxl-job cron task register jobhandler, name:{}, cron:{}", xxlJobInfo.getExecutorHandler(), xxlJobInfo.getScheduleConf());
 
-                if(Objects.isNull(jobInfoList) || CollectionUtils.isEmpty(jobInfoList.getData())
-                        || jobInfoList.getData().stream().noneMatch(jobInfo -> jobInfo.getExecutorHandler().equals(xxlJobInfo.getExecutorHandler())
-                )) {
+                if (Objects.isNull(jobInfoList) || CollectionUtils.isEmpty(jobInfoList.getData())
+                        || jobInfoList.getData().stream().noneMatch(jobInfo -> jobInfo.getExecutorHandler().equals(xxlJobInfo.getExecutorHandler()))
+                ) {
                     log.info(">>>>>>>>>>> 不存在 ExecutorHandler = {} 的定时任务，开始自动添加！", xxlJobInfo.getExecutorHandler());
                     // 自动添加定时任务
-                    ReturnT<String> returnT4 =  getXxlJobTemplate().addJob(xxlJobInfo);
+                    ReturnT<String> returnT4 = getXxlJobTemplate().addJob(xxlJobInfo);
                     if (returnT4.getCode() == ReturnT.FAIL_CODE) {
                         log.error(">>>>>>>>>>> 自动添加 ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
@@ -263,7 +311,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
                     log.info(">>>>>>>>>>> 存在 JobId = {}, ExecutorHandler = {} 的定时任务，开始自动更新！", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler());
 
-                    ReturnT<String> returnT4 =  getXxlJobTemplate().updateJob(xxlJobInfo);
+                    ReturnT<String> returnT4 = getXxlJobTemplate().updateJob(xxlJobInfo);
                     if (returnT4.getCode() == ReturnT.FAIL_CODE) {
                         log.error(">>>>>>>>>>> 自动更新 JobId = {}, ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
@@ -272,33 +320,32 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 }
 
                 // 如果是自启动，则启动任务
-                if(xxlJobInfo.isSelfStarting() && Objects.nonNull(xxlJobInfo.getId())){
-                    ReturnT<String> returnT4 =  getXxlJobTemplate().startJob(xxlJobInfo.getId());
+                if (xxlJobInfo.isSelfStarting() && Objects.nonNull(xxlJobInfo.getId())) {
+                    ReturnT<String> returnT4 = getXxlJobTemplate().startJob(xxlJobInfo.getId());
                     if (returnT4.getCode() == ReturnT.FAIL_CODE) {
-                        log.error(">>>>>>>>>>> 自动启动  ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT3.getMsg());
+                        log.error(">>>>>>>>>>> 自动启动  ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
                         log.info(">>>>>>>>>>> 自动启动 ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getExecutorHandler());
                     }
-
                 }
 
             }
 
-        } catch (Exception ex){
+        } catch (Exception ex) {
             log.error(ex.getMessage());
         }
     }
 
-	public XxlJobTemplate getXxlJobTemplate() {
-		return xxlJobTemplate;
-	}
-	
+    public XxlJobTemplate getXxlJobTemplate() {
+        return xxlJobTemplate;
+    }
+
     // ---------------------- applicationContext ----------------------
-	public ApplicationContext applicationContext;
+    public ApplicationContext applicationContext;
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }
-    
+
 }
