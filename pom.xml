@@ -207,7 +207,7 @@
 					<version>${maven-nexus-staging-plugin.version}</version>
 					<extensions>true</extensions>
 					<configuration>
-						<serverId>ossrh</serverId>
+						<serverId>2624322-release-6F6h6R</serverId>
 						<nexusUrl>https://oss.sonatype.org/</nexusUrl>
 						<autoReleaseAfterClose>true</autoReleaseAfterClose>
 						
