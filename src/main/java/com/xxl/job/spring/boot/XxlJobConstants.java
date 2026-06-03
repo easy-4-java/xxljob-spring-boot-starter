@@ -25,12 +25,12 @@ public class XxlJobConstants {
     /**
      * 任务调度平台API-登录
      */
-    public static final String LOGIN_GET = "/login";
+    public static final String LOGIN_GET = "/auth/doLogin";
 
     /**
      * 任务调度平台API-注销
      */
-    public static final String LOGOUT_GET = "/logout";
+    public static final String LOGOUT_GET = "/auth/logout";
 
     /**
      * 任务调度平台API-任务组列表
@@ -40,7 +40,7 @@ public class XxlJobConstants {
     /**
      * 任务调度平台API-新增任务组
      */
-    public static final String JOBGROUP_SAVE = "/jobgroup/save";
+    public static final String JOBGROUP_SAVE = "/jobgroup/insert";
 
     /**
      * 任务调度平台API-更新任务组
@@ -50,7 +50,7 @@ public class XxlJobConstants {
     /**
      * 任务调度平台API-移除任务组
      */
-    public static final String JOBGROUP_REMOVE = "/jobgroup/remove";
+    public static final String JOBGROUP_REMOVE = "/jobgroup/delete";
 
     /**
      * 任务调度平台API-查询任务组
@@ -71,7 +71,7 @@ public class XxlJobConstants {
     /**
      * 任务调度平台API-新增任务
      */
-    public static final String JOBINFO_ADD = "/jobinfo/add";
+    public static final String JOBINFO_ADD = "/jobinfo/insert";
 
     /**
      * 任务调度平台API-修改任务
@@ -81,7 +81,7 @@ public class XxlJobConstants {
     /**
      * 任务调度平台API-删除任务
      */
-    public static final String JOBINFO_REMOVE = "/jobinfo/remove";
+    public static final String JOBINFO_REMOVE = "/jobinfo/delete";
 
     /**
      * 任务调度平台API-停止任务
