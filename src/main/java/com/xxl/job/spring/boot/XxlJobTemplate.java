@@ -43,6 +43,18 @@ public class XxlJobTemplate {
 	private final Object loginLock = new Object();
 	private volatile boolean authenticated = false;
 
+	// 自动检测 admin 版本：默认 v2，首次 404 后切换到 v3
+	private volatile boolean useV3 = false;
+	private static final java.util.Map<String, String> V2_TO_V3 = new java.util.HashMap<>();
+	static {
+		V2_TO_V3.put(XxlJobConstants.LOGIN_GET_V2, XxlJobConstants.LOGIN_GET_V3);
+		V2_TO_V3.put(XxlJobConstants.LOGOUT_GET_V2, XxlJobConstants.LOGOUT_GET_V3);
+		V2_TO_V3.put(XxlJobConstants.JOBGROUP_SAVE_V2, XxlJobConstants.JOBGROUP_SAVE_V3);
+		V2_TO_V3.put(XxlJobConstants.JOBGROUP_REMOVE_V2, XxlJobConstants.JOBGROUP_REMOVE_V3);
+		V2_TO_V3.put(XxlJobConstants.JOBINFO_ADD_V2, XxlJobConstants.JOBINFO_ADD_V3);
+		V2_TO_V3.put(XxlJobConstants.JOBINFO_REMOVE_V2, XxlJobConstants.JOBINFO_REMOVE_V3);
+	}
+
 	public XxlJobTemplate(UnirestInstance unirestInstance,
 						   XxlJobProperties properties,
 						   XxlJobAdminProperties adminProperties,
@@ -76,7 +88,7 @@ public class XxlJobTemplate {
 
 	public ReturnT<String> login(String userName, String password, boolean remember) {
 		try {
-			String url = buildUrl(XxlJobConstants.LOGIN_GET);
+			String url = buildUrl(XxlJobConstants.LOGIN_GET_V2);
 			HttpResponse<String> response = unirestInstance.post(url)
 					.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
 					.field("userName", userName)
@@ -100,7 +112,7 @@ public class XxlJobTemplate {
 
 	public ReturnT<String> logout() {
 		try {
-			String url = buildUrl(XxlJobConstants.LOGOUT_GET);
+			String url = buildUrl(XxlJobConstants.LOGOUT_GET_V2);
 			HttpResponse<String> response = unirestInstance.post(url)
 					.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
 					.asString();
@@ -124,6 +136,38 @@ public class XxlJobTemplate {
 				throw new RuntimeException("xxl-job login failed before request: " + suffix);
 			}
 		}
+		HttpResponse<String> response = executePost(url, paramMap);
+
+		// 自动版本检测：v2 路径返回 404 时切换到 v3
+		if (!useV3 && response.getStatus() == 404) {
+			String v3Suffix = V2_TO_V3.get(suffix);
+			if (v3Suffix != null) {
+				log.warn("xxl-job admin v2 path {} returned 404, switching to v3 path {}", suffix, v3Suffix);
+				useV3 = true;
+				authenticated = false;
+				if (loginIfNeed()) {
+					return executePost(buildUrl(v3Suffix), paramMap);
+				}
+			}
+		}
+
+		// 非登录请求：检测 session 过期（非 JSON 响应 = 被重定向到登录页）
+		if (!isLoginRequest && response.isSuccess() && !isResponseJson(response)) {
+			String body = null;
+			try { body = response.getBody(); } catch (Exception ignored) {}
+			log.warn("xxl-job session expired (non-JSON response), re-login. body preview: {}",
+					body != null ? body.substring(0, Math.min(body.length(), 200)) : "null");
+			authenticated = false;
+			if (loginIfNeed()) {
+				log.info("xxl-job re-login success, retrying request.");
+				return executePost(url, paramMap);
+			}
+			log.error("xxl-job re-login failed after session expiry");
+		}
+		return response;
+	}
+
+	private HttpResponse<String> executePost(String url, Map<String, Object> paramMap) {
 		return unirestInstance.post(url)
 				.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
 				.fields(paramMap)
@@ -162,7 +206,7 @@ public class XxlJobTemplate {
 			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器信息不能为空");
 		}
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobGroup), Map.class);
-		return doRequest(XxlJobConstants.JOBGROUP_SAVE, paramMap);
+		return doRequest(XxlJobConstants.JOBGROUP_SAVE_V2, paramMap);
 	}
 
 	public ReturnT<String> updateJobGroup(XxlJobGroup jobGroup) {
@@ -176,7 +220,7 @@ public class XxlJobTemplate {
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
-		return doRequest(XxlJobConstants.JOBGROUP_REMOVE, paramMap);
+		return doRequest(XxlJobConstants.JOBGROUP_REMOVE_V2, paramMap);
 	}
 
 	public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup) {
@@ -237,7 +281,7 @@ public class XxlJobTemplate {
 			return new ReturnT<>(ReturnT.FAIL_CODE, "任务描述不能为空");
 		}
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
-		return doRequest(XxlJobConstants.JOBINFO_ADD, paramMap);
+		return doRequest(XxlJobConstants.JOBINFO_ADD_V2, paramMap);
 	}
 
 	public ReturnT<String> updateJob(XxlJobInfo jobInfo) {
@@ -260,7 +304,7 @@ public class XxlJobTemplate {
 		}
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
-		return doRequest(XxlJobConstants.JOBINFO_REMOVE, paramMap);
+		return doRequest(XxlJobConstants.JOBINFO_REMOVE_V2, paramMap);
 	}
 
 	public ReturnT<String> stopJob(Integer jobId) {
@@ -298,6 +342,26 @@ public class XxlJobTemplate {
 		return doRequest(XxlJobConstants.JOBINFO_TRIGGER, paramMap);
 	}
 
+	/**
+	 * 解析 admin 响应，兼容 data/content 字段差异。
+	 * xxl-job-admin 3.3.0+ 使用 Response{code, msg, data}
+	 * xxl-job-admin 2.x 使用 ReturnT{code, msg, content}
+	 */
+	private <T> ReturnT<T> parseReturnT(String body) {
+		com.alibaba.fastjson2.JSONObject json = JSON.parseObject(body);
+		int code = json.getIntValue("code", ReturnT.FAIL_CODE);
+		String msg = json.getString("msg");
+		String innerJson = json.getString("data");
+		if (innerJson == null) {
+			innerJson = json.getString("content");
+		}
+		if (innerJson != null) {
+			T data = JSON.parseObject(innerJson, new TypeReference<T>() {});
+			return new ReturnT<>(data);
+		}
+		return new ReturnT<>(code, msg);
+	}
+
 	private String errorMsg(HttpResponse<String> response) {
 		String statusText = response.getStatusText();
 		if (statusText != null && !statusText.isEmpty()) {
@@ -319,7 +383,7 @@ public class XxlJobTemplate {
 				String body = response.getBody();
 				log.debug("xxl-job response body: {} .", body);
 				if (isResponseJson(response)) {
-					return JSON.parseObject(body, new TypeReference<ReturnT<T>>() {});
+					return parseReturnT(body);
 				}
 				// 非 JSON 响应通常是登录失败或重定向
 				log.error("xxl-job request returned non-JSON response. url suffix:{}, body:{}", suffix, body);
