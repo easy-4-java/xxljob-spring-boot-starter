@@ -19,6 +19,7 @@ import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import com.xxl.job.core.glue.GlueFactory;
 import com.xxl.job.core.handler.annotation.XxlJob;
+import com.xxl.job.core.handler.impl.MethodJobHandler;
 import com.xxl.job.spring.boot.annotation.XxlJobCron;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
@@ -338,6 +339,72 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
     public XxlJobTemplate getXxlJobTemplate() {
         return xxlJobTemplate;
+    }
+
+    /**
+     * 重写注册方法，支持 @XxlJobCron 独立使用（不依赖 @XxlJob）
+     * 当 xxlJob 为 null 时，从 @XxlJobCron 获取 handler 名称和生命周期方法
+     */
+    @Override
+    protected void registJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
+        // 获取 JobHandler 名称、init/destroy 方法
+        String name = null;
+        String initMethodName = null;
+        String destroyMethodName = null;
+
+        // 优先从 @XxlJob 获取
+        if (xxlJob != null && StringUtils.hasText(xxlJob.value())) {
+            name = xxlJob.value();
+            initMethodName = xxlJob.init();
+            destroyMethodName = xxlJob.destroy();
+        }
+
+        // 如果 @XxlJob 未找到或 value 为空，尝试从 @XxlJobCron 获取
+        if (!StringUtils.hasText(name)) {
+            XxlJobCron xxlJobCron = AnnotationUtils.findAnnotation(executeMethod, XxlJobCron.class);
+            if (xxlJobCron != null && StringUtils.hasText(xxlJobCron.value())) {
+                name = xxlJobCron.value();
+                initMethodName = xxlJobCron.init();
+                destroyMethodName = xxlJobCron.destroy();
+            }
+        }
+
+        if (!StringUtils.hasText(name)) {
+            return;
+        }
+
+        //make and simplify the variables since they'll be called several times later
+        Class<?> clazz = bean.getClass();
+        String methodName = executeMethod.getName();
+        if (loadJobHandler(name) != null) {
+            throw new RuntimeException("xxl-job jobhandler[" + name + "] naming conflicts.");
+        }
+
+        executeMethod.setAccessible(true);
+
+        // init and destroy
+        Method initMethod = null;
+        Method destroyMethod = null;
+
+        if (StringUtils.hasText(initMethodName)) {
+            try {
+                initMethod = clazz.getDeclaredMethod(initMethodName);
+                initMethod.setAccessible(true);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("xxl-job method-jobhandler initMethod invalid, for[" + clazz + "#" + methodName + "] .");
+            }
+        }
+        if (StringUtils.hasText(destroyMethodName)) {
+            try {
+                destroyMethod = clazz.getDeclaredMethod(destroyMethodName);
+                destroyMethod.setAccessible(true);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("xxl-job method-jobhandler destroyMethod invalid, for[" + clazz + "#" + methodName + "] .");
+            }
+        }
+
+        // registry jobhandler
+        registJobHandler(name, new MethodJobHandler(bean, executeMethod, initMethod, destroyMethod));
     }
 
     // ---------------------- applicationContext ----------------------

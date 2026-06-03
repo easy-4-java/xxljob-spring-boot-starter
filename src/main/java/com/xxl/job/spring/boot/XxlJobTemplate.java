@@ -146,7 +146,7 @@ public class XxlJobTemplate {
 		String url = this.joinPath(XxlJobConstants.JOBGROUP_PAGELIST);
 		Request request = this.buildRequestEntity(url, paramMap, false);
 		// xxl-job admin 请求操作
-		return this.doRequest(request, XxlJobGroupList.class);
+		return this.doRequestForPageList(request, XxlJobGroupList.class);
 	}
 
 	/**
@@ -272,7 +272,7 @@ public class XxlJobTemplate {
 		String url = this.joinPath(XxlJobConstants.JOBINFO_PAGELIST);
 		Request request = this.buildRequestEntity(url, paramMap, false);
 		// xxl-job admin 请求操作
-		return this.doRequest(request, XxlJobInfoList.class);
+		return this.doRequestForPageList(request, XxlJobInfoList.class);
 	}
 
 	/**
@@ -533,6 +533,29 @@ public class XxlJobTemplate {
 		}
 	}
 
+	/**
+	 * 处理 pageList 接口返回的非 ReturnT 包装的响应（直接是 Map 格式）
+	 * admin 的 /jobgroup/pageList 和 /jobinfo/pageList 返回 {recordsTotal, recordsFiltered, data}
+	 */
+	private <T> ReturnT<T> doRequestForPageList(Request request, Class<T> objectClass) {
+		try {
+			Response response = okhttp3Client.newCall(request).execute();
+			if(response.isSuccessful()) {
+				log.info("xxl-job pageList request successful.");
+				String body = response.body().string();
+				log.debug("xxl-job pageList response body: {} .", body);
+				if(isResponseJson(response)){
+					T result = JSON.parseObject(body, objectClass);
+					return new ReturnT<T>(result);
+				}
+			}
+			log.error("xxl-job pageList request fail.");
+			return new ReturnT<T>(ReturnT.FAIL_CODE, response.toString());
+		} catch (IOException e) {
+			return new ReturnT<T>(ReturnT.FAIL_CODE, e.getMessage());
+		}
+	}
+
 	private <T> ReturnT<T> doRequest(Request request) {
 		// xxl-job admin 请求操作
 		try {
@@ -568,14 +591,11 @@ public class XxlJobTemplate {
 	 * @return
 	 */
 	private String joinPath(String suffix) {
-		String str = "/";
-		String address;
-		if (!adminProperties.getAddresses().endsWith(str)) {
-			address = adminProperties.getAddresses() + str + suffix;
-		} else {
-			address = adminProperties.getAddresses() + suffix;
+		String address = adminProperties.getAddresses();
+		if (address.endsWith("/")) {
+			address = address.substring(0, address.length() - 1);
 		}
-		return address;
+		return address + suffix;
 	}
 
 }
