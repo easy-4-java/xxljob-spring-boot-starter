@@ -81,12 +81,22 @@ public class XxlJobTemplate {
 			if (authenticated) {
 				return true;
 			}
-			ReturnT<String> result = this.login(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember());
-			return result.getCode() == ReturnT.SUCCESS_CODE;
+			// v2 → v3 自动回退
+			if (doLogin(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
+				return true;
+			}
+			if (!useV3) {
+				log.info("xxl-job v2 login failed, trying v3.");
+				if (doLoginV3(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
+					useV3 = true;
+					return true;
+				}
+			}
+			return false;
 		}
 	}
 
-	public ReturnT<String> login(String userName, String password, boolean remember) {
+	private boolean doLogin(String userName, String password, boolean remember) {
 		try {
 			String url = buildUrl(XxlJobConstants.LOGIN_GET_V2);
 			HttpResponse<String> response = unirestInstance.post(url)
@@ -96,18 +106,51 @@ public class XxlJobTemplate {
 					.field("ifRemember", remember ? "on" : "off")
 					.asString();
 			if (response.isSuccess()) {
-				log.info("xxl-job login success.");
+				log.info("xxl-job login success (v2).");
 				authenticated = true;
-				return new ReturnT<String>(response.getBody());
+				return true;
 			}
-			log.error("xxl-job login fail. status:{}", response.getStatus());
+			log.warn("xxl-job login fail (v2). status:{}", response.getStatus());
 			authenticated = false;
-			return new ReturnT<String>(ReturnT.FAIL_CODE, response.getStatusText());
+			return false;
 		} catch (Exception e) {
-			log.error("xxl-job login error.", e);
+			log.error("xxl-job login error (v2).", e);
 			authenticated = false;
-			return new ReturnT<String>(ReturnT.FAIL_CODE, e.getMessage());
+			return false;
 		}
+	}
+
+	private boolean doLoginV3(String userName, String password, boolean remember) {
+		try {
+			String url = buildUrl(XxlJobConstants.LOGIN_GET_V3);
+			HttpResponse<String> response = unirestInstance.post(url)
+					.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
+					.field("userName", userName)
+					.field("password", password)
+					.field("ifRemember", remember ? "on" : "off")
+					.asString();
+			if (response.isSuccess()) {
+				log.info("xxl-job login success (v3).");
+				authenticated = true;
+				return true;
+			}
+			log.warn("xxl-job login fail (v3). status:{}", response.getStatus());
+			authenticated = false;
+			return false;
+		} catch (Exception e) {
+			log.error("xxl-job login error (v3).", e);
+			authenticated = false;
+			return false;
+		}
+	}
+
+	public ReturnT<String> login(String userName, String password, boolean remember) {
+		boolean ok = doLogin(userName, password, remember);
+		if (!ok && !useV3) {
+			ok = doLoginV3(userName, password, remember);
+			if (ok) useV3 = true;
+		}
+		return ok ? new ReturnT<String>("ok") : new ReturnT<String>(ReturnT.FAIL_CODE, "login failed");
 	}
 
 	public ReturnT<String> logout() {
