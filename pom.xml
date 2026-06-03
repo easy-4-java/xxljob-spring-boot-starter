@@ -385,7 +385,8 @@
 		<micrometer.version>1.10.4</micrometer.version>
 		<fastjson2.version>2.0.53</fastjson2.version>
 		<okhttp3.version>3.14.9</okhttp3.version>
-		<xxl-job.version>2.4.0</xxl-job.version>
+		<xxl-job.version>3.4.0</xxl-job.version>
+		<xxl-tool.version>2.5.0</xxl-tool.version>
 		<lombok.version>1.18.36</lombok.version>
 	</properties>
 

@@ -1,6 +1,6 @@
 package com.xxl.job.spring.boot.util;
 
-import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
+import com.xxl.job.core.constant.ExecutorBlockStrategyEnum;
 import com.xxl.job.core.glue.GlueTypeEnum;
 import com.xxl.job.spring.boot.executor.ExecutorRouteStrategyEnum;
 import com.xxl.job.spring.boot.executor.ExecutorTriggerPeriodEnum;
