@@ -377,10 +377,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<caffeine.version>2.9.3</caffeine.version>
+		<unirest-java.version>3.14.5</unirest-java.version>
 		<micrometer.version>1.10.4</micrometer.version>
 		<fastjson2.version>2.0.34</fastjson2.version>
-		<okhttp3.version>3.14.9</okhttp3.version>
 		<xxl-job.version>2.5.0</xxl-job.version>
 		<lombok.version>1.18.36</lombok.version>
 		<maven.version>3.0</maven.version>
@@ -406,12 +405,6 @@
 			    <groupId>com.xuxueli</groupId>
 			    <artifactId>xxl-job-core</artifactId>
 			    <version>${xxl-job.version}</version>
-			</dependency>
-			<!-- https://mvnrepository.com/artifact/com.github.ben-manes.caffeine/caffeine -->
-			<dependency>
-				<groupId>com.github.ben-manes.caffeine</groupId>
-				<artifactId>caffeine</artifactId>
-				<version>${caffeine.version}</version>
 			</dependency>
 
 		</dependencies>
@@ -478,13 +471,11 @@
 		    <groupId>com.xuxueli</groupId>
 		    <artifactId>xxl-job-core</artifactId>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.konghq/unirest-java -->
 		<dependency>
-			<groupId>com.squareup.okhttp3</groupId>
-			<artifactId>okhttp</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.github.ben-manes.caffeine</groupId>
-			<artifactId>caffeine</artifactId>
+			<groupId>com.konghq</groupId>
+			<artifactId>unirest-java</artifactId>
+			<version>${unirest-java.version}</version>
 		</dependency>
 		<!-- For AOP -->
 		<dependency>

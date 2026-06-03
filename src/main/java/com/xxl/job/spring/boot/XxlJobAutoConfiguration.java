@@ -3,9 +3,9 @@ package com.xxl.job.spring.boot;
 
 import com.xxl.job.core.executor.XxlJobExecutor;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
-import com.xxl.job.spring.boot.cookie.CaffeineCacheCookieJar;
+import kong.unirest.Unirest;
+import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
-import okhttp3.OkHttpClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -26,24 +26,33 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class XxlJobAutoConfiguration {
 
+	@Bean(destroyMethod = "shutDown")
+	@ConditionalOnMissingBean
+	public UnirestInstance unirestInstance() {
+		UnirestInstance instance = Unirest.spawnInstance();
+		instance.config()
+				.connectTimeout(10000)
+				.enableCookieManagement(true)
+				.followRedirects(true);
+		return instance;
+	}
+
 	@Bean
 	public XxlJobTemplate xxlJobTemplate(
-			ObjectProvider<OkHttpClient> okhttp3ClientProvider,
+			ObjectProvider<UnirestInstance> unirestProvider,
 			XxlJobProperties properties,
 			XxlJobAdminProperties adminProperties,
-			XxlJobAdminCookieProperties cookieProperties,
 			XxlJobExecutorProperties executorProperties) {
-		OkHttpClient okhttp3Client = okhttp3ClientProvider.getIfAvailable(() -> new OkHttpClient.Builder()
-				.cookieJar(new CaffeineCacheCookieJar(cookieProperties.getMaximumSize(), cookieProperties.getExpireAfterWrite(), cookieProperties.getExpireAfterAccess())).build());
-		return new XxlJobTemplate(okhttp3Client, properties, adminProperties, executorProperties);
+		UnirestInstance instance = unirestProvider.getIfAvailable(this::unirestInstance);
+		return new XxlJobTemplate(instance, properties, adminProperties, executorProperties);
 	}
-	
+
 	@Bean
 	@ConditionalOnMissingBean
 	@ConditionalOnProperty(prefix = XxlJobExecutorProperties.PREFIX, value = "enabled", havingValue = "true", matchIfMissing = true)
 	public XxlJobSpringExecutor xxlJobExecutor(
 			XxlJobTemplate xxlJobTemplate,
-			XxlJobProperties properties, 
+			XxlJobProperties properties,
 			XxlJobAdminProperties adminProperties,
 			XxlJobExecutorProperties executorProperties) {
 		log.info(">>>>>>>>>>> xxl-job auto binding executor init.");
@@ -58,6 +67,5 @@ public class XxlJobAutoConfiguration {
 		xxlJobExecutor.setLogRetentionDays(executorProperties.getLogretentiondays());
 		return xxlJobExecutor;
 	}
-	
 
 }
