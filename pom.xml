@@ -376,7 +376,8 @@
 		<micrometer.version>1.10.4</micrometer.version>
 		<fastjson2.version>2.0.34</fastjson2.version>
 		<okhttp3.version>3.14.9</okhttp3.version>
-		<xxl-job.version>2.4.0</xxl-job.version>
+		<xxl-job.version>2.4.2</xxl-job.version>
+		<lombok.version>1.18.36</lombok.version>
 		<maven.version>3.0</maven.version>
 		<maven-gpg-plugin.version>1.6</maven-gpg-plugin.version>
 		<maven-jar-plugin.version>3.1.1</maven-jar-plugin.version>
@@ -417,6 +418,7 @@
 		<dependency>
 		    <groupId>org.projectlombok</groupId>
 		    <artifactId>lombok</artifactId>
+		    <version>${lombok.version}</version>
 		    <scope>compile</scope>
 		</dependency>
 
