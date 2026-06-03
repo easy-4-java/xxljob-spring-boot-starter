@@ -12,7 +12,7 @@
 	<groupId>io.github.hiwepy</groupId>
 	<artifactId>xxljob-spring-boot-starter</artifactId>
 	<description>Spring Boot Starter For XXL-Job</description>
-	<version>3.5.x.20260603-SNAPSHOT</version>
+	<version>3.0.x.20260603-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<url>https://github.com/hiwepy/${project.artifactId}</url>
 	<packaging>jar</packaging>
@@ -381,10 +381,9 @@
 		<maven-surefire-plugin.version>3.5.0</maven-surefire-plugin.version>
 		<maven-war-plugin.version>3.4.0</maven-war-plugin.version>
 		
-		<caffeine.version>2.9.3</caffeine.version>
+		<unirest-java.version>4.6.0</unirest-java.version>
 		<micrometer.version>1.10.4</micrometer.version>
 		<fastjson2.version>2.0.53</fastjson2.version>
-		<okhttp3.version>3.14.9</okhttp3.version>
 		<xxl-job.version>3.4.0</xxl-job.version>
 		<xxl-tool.version>2.5.0</xxl-tool.version>
 		<lombok.version>1.18.36</lombok.version>
@@ -404,12 +403,6 @@
 			    <groupId>com.xuxueli</groupId>
 			    <artifactId>xxl-job-core</artifactId>
 			    <version>${xxl-job.version}</version>
-			</dependency>
-			
-			<dependency>
-				<groupId>com.github.ben-manes.caffeine</groupId>
-				<artifactId>caffeine</artifactId>
-				<version>${caffeine.version}</version>
 			</dependency>
 
 		</dependencies>
@@ -477,14 +470,17 @@
 		    <artifactId>xxl-job-core</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.squareup.okhttp3</groupId>
-			<artifactId>okhttp</artifactId>
+			<groupId>com.konghq</groupId>
+			<artifactId>unirest-java-core</artifactId>
+			<version>${unirest-java.version}</version>
 		</dependency>
+		<!-- https://mvnrepository.com/artifact/com.konghq/unirest-modules-jackson -->
 		<dependency>
-			<groupId>com.github.ben-manes.caffeine</groupId>
-			<artifactId>caffeine</artifactId>
+			<groupId>com.konghq</groupId>
+			<artifactId>unirest-modules-jackson</artifactId>
+			<version>${unirest-java.version}</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
