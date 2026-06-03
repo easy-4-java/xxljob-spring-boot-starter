@@ -15,10 +15,11 @@
  */
 package com.xxl.job.spring.boot;
 
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.tool.response.Response;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import com.xxl.job.core.glue.GlueFactory;
 import com.xxl.job.core.handler.annotation.XxlJob;
+import com.xxl.job.core.handler.impl.MethodJobHandler;
 import com.xxl.job.spring.boot.annotation.XxlJobCron;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
@@ -164,7 +165,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 }
 
                 // regist job handler (通过父类方法注册到执行器)
-                registJobHandler(xxlJob, bean, executeMethod);
+                registryJobHandler(xxlJob, bean, executeMethod);
                 // regist cron task info (for auto-binding to admin)
                 registJobHandlerCronTaskInfo(handlerName, xxlJobCron, bean, executeMethod);
             }
@@ -247,13 +248,13 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             }
 
             // 检查任务组是否存在
-            ReturnT<XxlJobGroupList> returnT1 = getXxlJobTemplate().jobInfoGroupList(0, Integer.MAX_VALUE, appName, null);
-            if (returnT1.getCode() == ReturnT.FAIL_CODE) {
+            Response<XxlJobGroupList> returnT1 = getXxlJobTemplate().jobInfoGroupList(0, Integer.MAX_VALUE, appName, null);
+            if (returnT1.getCode() == 500) {
                 log.error(">>>>>>>>>>> 执行器查询失败!失败原因:{}", returnT1.getMsg());
                 return;
             }
             // 执行器不存在则创建
-            XxlJobGroupList jobGroupList = returnT1.getContent();
+            XxlJobGroupList jobGroupList = returnT1.getData();
             Integer jobGroupId = null;
             if (Objects.isNull(jobGroupList) || CollectionUtils.isEmpty(jobGroupList.getData())
                     || jobGroupList.getData().stream().noneMatch(xxlJobGroup -> xxlJobGroup.getAppName().equals(appName))) {
@@ -264,27 +265,27 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 xxlJobGroup.setAddressType(0);
                 xxlJobGroup.setOrder(RANDOM_ORDER.nextInt(1000));
                 xxlJobGroup.setTitle(appTitle);
-                ReturnT<String> returnT2 = getXxlJobTemplate().addJobGroup(xxlJobGroup);
-                if (returnT2.getCode() == ReturnT.FAIL_CODE) {
+                Response<String> returnT2 = getXxlJobTemplate().addJobGroup(xxlJobGroup);
+                if (returnT2.getCode() == 500) {
                     log.error(">>>>>>>>>>> 执行器'{}'添加添加失败!失败原因:{}", appName, returnT2.getMsg());
                     return;
                 }
                 returnT1 = getXxlJobTemplate().jobInfoGroupList(0, Integer.MAX_VALUE, appName, null);
-                if (returnT1.getCode() == ReturnT.FAIL_CODE) {
+                if (returnT1.getCode() == 500) {
                     log.error(">>>>>>>>>>> 执行器查询失败!失败原因:{}", returnT1.getMsg());
                     return;
                 }
-                jobGroupList = returnT1.getContent();
+                jobGroupList = returnT1.getData();
             } else {
                 jobGroupId = jobGroupList.getData().stream().filter(xxlJobGroup -> xxlJobGroup.getAppName().equals(appName)).findFirst().get().getId();
             }
             // 定时任务是否存在
-            ReturnT<XxlJobInfoList> returnT3 = getXxlJobTemplate().jobInfoList(0, Integer.MAX_VALUE, jobGroupId);
-            if (returnT3.getCode() == ReturnT.FAIL_CODE) {
+            Response<XxlJobInfoList> returnT3 = getXxlJobTemplate().jobInfoList(0, Integer.MAX_VALUE, jobGroupId);
+            if (returnT3.getCode() == 500) {
                 log.error(">>>>>>>>>>> 定时任务查询失败!失败原因:{}", returnT3.getMsg());
                 return;
             }
-            XxlJobInfoList jobInfoList = returnT3.getContent();
+            XxlJobInfoList jobInfoList = returnT3.getData();
 
             // 执行器存在或者创建成功，添加定时任务
             for (XxlJobInfo xxlJobInfo : cacheJobs) {
@@ -298,12 +299,12 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 ) {
                     log.info(">>>>>>>>>>> 不存在 ExecutorHandler = {} 的定时任务，开始自动添加！", xxlJobInfo.getExecutorHandler());
                     // 自动添加定时任务
-                    ReturnT<String> returnT4 = getXxlJobTemplate().addJob(xxlJobInfo);
-                    if (returnT4.getCode() == ReturnT.FAIL_CODE) {
+                    Response<String> returnT4 = getXxlJobTemplate().addJob(xxlJobInfo);
+                    if (returnT4.getCode() == 500) {
                         log.error(">>>>>>>>>>> 自动添加 ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
                         log.info(">>>>>>>>>>> 自动添加 ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getExecutorHandler());
-                        xxlJobInfo.setId(Integer.valueOf(returnT4.getContent()));
+                        xxlJobInfo.setId(Integer.valueOf(returnT4.getData()));
                     }
                 } else {
                     Optional<XxlJobInfo> optional = jobInfoList.getData().stream().filter(jobInfo -> jobInfo.getExecutorHandler().equals(xxlJobInfo.getExecutorHandler())).findFirst();
@@ -311,8 +312,8 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
                     log.info(">>>>>>>>>>> 存在 JobId = {}, ExecutorHandler = {} 的定时任务，开始自动更新！", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler());
 
-                    ReturnT<String> returnT4 = getXxlJobTemplate().updateJob(xxlJobInfo);
-                    if (returnT4.getCode() == ReturnT.FAIL_CODE) {
+                    Response<String> returnT4 = getXxlJobTemplate().updateJob(xxlJobInfo);
+                    if (returnT4.getCode() == 500) {
                         log.error(">>>>>>>>>>> 自动更新 JobId = {}, ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
                         log.info(">>>>>>>>>>> 自动更新 JobId = {}, ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler());
@@ -321,8 +322,8 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
                 // 如果是自启动，则启动任务
                 if (xxlJobInfo.isSelfStarting() && Objects.nonNull(xxlJobInfo.getId())) {
-                    ReturnT<String> returnT4 = getXxlJobTemplate().startJob(xxlJobInfo.getId());
-                    if (returnT4.getCode() == ReturnT.FAIL_CODE) {
+                    Response<String> returnT4 = getXxlJobTemplate().startJob(xxlJobInfo.getId());
+                    if (returnT4.getCode() == 500) {
                         log.error(">>>>>>>>>>> 自动启动  ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
                         log.info(">>>>>>>>>>> 自动启动 ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getExecutorHandler());
@@ -338,6 +339,72 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
     public XxlJobTemplate getXxlJobTemplate() {
         return xxlJobTemplate;
+    }
+
+    /**
+     * 重写注册方法，支持 @XxlJobCron 独立使用（不依赖 @XxlJob）
+     * 当 xxlJob 为 null 时，从 @XxlJobCron 获取 handler 名称和生命周期方法
+     */
+    @Override
+    protected void registryJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
+        // 获取 JobHandler 名称、init/destroy 方法
+        String name = null;
+        String initMethodName = null;
+        String destroyMethodName = null;
+
+        // 优先从 @XxlJob 获取
+        if (xxlJob != null && StringUtils.hasText(xxlJob.value())) {
+            name = xxlJob.value();
+            initMethodName = xxlJob.init();
+            destroyMethodName = xxlJob.destroy();
+        }
+
+        // 如果 @XxlJob 未找到或 value 为空，尝试从 @XxlJobCron 获取
+        if (!StringUtils.hasText(name)) {
+            XxlJobCron xxlJobCron = AnnotationUtils.findAnnotation(executeMethod, XxlJobCron.class);
+            if (xxlJobCron != null && StringUtils.hasText(xxlJobCron.value())) {
+                name = xxlJobCron.value();
+                initMethodName = xxlJobCron.init();
+                destroyMethodName = xxlJobCron.destroy();
+            }
+        }
+
+        if (!StringUtils.hasText(name)) {
+            return;
+        }
+
+        //make and simplify the variables since they'll be called several times later
+        Class<?> clazz = bean.getClass();
+        String methodName = executeMethod.getName();
+        if (loadJobHandler(name) != null) {
+            throw new RuntimeException("xxl-job jobhandler[" + name + "] naming conflicts.");
+        }
+
+        executeMethod.setAccessible(true);
+
+        // init and destroy
+        Method initMethod = null;
+        Method destroyMethod = null;
+
+        if (StringUtils.hasText(initMethodName)) {
+            try {
+                initMethod = clazz.getDeclaredMethod(initMethodName);
+                initMethod.setAccessible(true);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("xxl-job method-jobhandler initMethod invalid, for[" + clazz + "#" + methodName + "] .");
+            }
+        }
+        if (StringUtils.hasText(destroyMethodName)) {
+            try {
+                destroyMethod = clazz.getDeclaredMethod(destroyMethodName);
+                destroyMethod.setAccessible(true);
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("xxl-job method-jobhandler destroyMethod invalid, for[" + clazz + "#" + methodName + "] .");
+            }
+        }
+
+        // registry jobhandler
+        registryJobHandler(name, new MethodJobHandler(bean, executeMethod, initMethod, destroyMethod));
     }
 
     // ---------------------- applicationContext ----------------------

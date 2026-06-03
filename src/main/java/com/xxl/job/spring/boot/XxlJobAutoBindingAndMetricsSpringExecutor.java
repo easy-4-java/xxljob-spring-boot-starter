@@ -25,7 +25,7 @@ public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBinding
     }
 
     @Override
-    protected void registJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
+    protected void registryJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
         // 获取 JobHandler 名称、init/destroy 方法
         String name = null;
         String initMethodName = null;
@@ -83,7 +83,7 @@ public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBinding
         }
 
         // registry jobhandler
-        registJobHandler(name, new MetricMethodJobHandler(registry, bean, executeMethod, initMethod, destroyMethod, tags));
+        registryJobHandler(name, new MetricMethodJobHandler(registry, bean, executeMethod, initMethod, destroyMethod, tags));
     }
 
 }
