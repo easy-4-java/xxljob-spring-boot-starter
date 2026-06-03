@@ -16,8 +16,9 @@
 package com.xxl.job.spring.boot;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.TypeReference;
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.tool.response.Response;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;
@@ -56,210 +57,113 @@ public class XxlJobTemplate {
 		this.executorProperties = executorProperties;
 	}
 
-	public ReturnT<String> login(String userName, String password, boolean remember) {
+	public Response<String> login(String userName, String password, boolean remember) {
 		try {
-			// xxl-job admin 请求参数
 			Map<String, Object> paramMap = new HashMap<>(3);
 			paramMap.put("userName", userName);
 			paramMap.put("password", password);
 			paramMap.put("ifRemember", remember ? "on" : "off");
-			// xxl-job admin 请求体
 			String url = this.joinPath(XxlJobConstants.LOGIN_GET);
 			Request request = this.buildRequestEntity(url, paramMap, true);
-			// xxl-job admin 请求操作
-			Response response = okhttp3Client.newCall(request).execute();
-			// xxl-job admin 请求结果成功
+			okhttp3.Response response = okhttp3Client.newCall(request).execute();
 			if(response.isSuccessful()) {
 				log.info("xxl-job login success.");
-				// 从返回结果中获取cookie
 				String cookie = response.header(HttpHeaders.SET_COOKIE);
 				log.info("xxl-job cookie {}.", cookie);
-				// 返回cookie
-				return new ReturnT<String>(cookie);
+				return Response.ofSuccess(cookie);
 			}
-			// xxl-job admin 请求结果失败
 			log.error("xxl-job login fail.");
-			// xxl-job admin 请求结果失败
-			return new ReturnT<String>(ReturnT.FAIL_CODE, response.toString());
+			return Response.ofFail(response.toString());
 		} catch (IOException e) {
-			return new ReturnT<String>(ReturnT.FAIL_CODE, e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
-	private boolean isResponseJson(Response response) {
+	private boolean isResponseJson(okhttp3.Response response) {
 		String contentType = response.header(HttpHeaders.CONTENT_TYPE);
 		return contentType != null && (contentType.startsWith(MediaType.APPLICATION_JSON_VALUE));
 	}
 
-	/**
-	 * 退出登录
-	 * @return ReturnT 返回结果
-	 * @throws IOException IO异常
-	 */
-	public ReturnT<String> logout() throws IOException {
-		// xxl-job admin 请求参数
+	public Response<String> logout() throws IOException {
 		Map<String, Object> paramMap = Collections.emptyMap();
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.LOGOUT_GET);
 		Request request = this.buildRequestEntity(url, paramMap);
-		// xxl-job admin 请求操作
-		Response response = okhttp3Client.newCall(request).execute();
-		// xxl-job admin 请求结果成功
+		okhttp3.Response response = okhttp3Client.newCall(request).execute();
 		if(response.isSuccessful()) {
 			log.info("xxl-job logout success.");
-			// 返回cookie
-			return ReturnT.SUCCESS;
+			return Response.ofSuccess();
 		}
-		// xxl-job admin 请求结果失败
 		log.error("xxl-job logout fail.");
-		// xxl-job admin 请求结果失败
-		return new ReturnT<String>(ReturnT.FAIL_CODE, response.toString());
+		return Response.ofFail(response.toString());
 	}
 
-
-	/**
-	 * 获取xxl-job 执行器列表数据
-	 * @param start	起始位置
-	 * @param length 数量
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<XxlJobGroupList> jobInfoGroupList(int start, int length) {
+	public Response<XxlJobGroupList> jobInfoGroupList(int start, int length) {
 		return this.jobInfoGroupList(start, length, EMPTY, EMPTY);
 	}
 
-	/**
-	 * 获取xxl-job 执行器列表数据
-	 * @param start	起始位置
-	 * @param length 数量
-	 * @param appname 执行器名称
-	 * @param title 执行器标题
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<XxlJobGroupList> jobInfoGroupList(int start, int length, String appname, String title) {
-		// xxl-job admin 请求参数
+	public Response<XxlJobGroupList> jobInfoGroupList(int start, int length, String appname, String title) {
 		Map<String, Object> paramMap = new HashMap<>(7);
 		paramMap.put("start", Math.max(0, start));
 		paramMap.put("length", Math.min(length, 5));
 		paramMap.put("appname", appname);
 		paramMap.put("title", title);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBGROUP_PAGELIST);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
-		return this.doRequest(request, XxlJobGroupList.class);
+		return this.doRequestForPageList(request, XxlJobGroupList.class);
 	}
 
-	/**
-	 * 获取调度任务组
-	 * @param jobGroupId 调度任务组ID
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<XxlJobGroup> jobInfoGroup(Integer jobGroupId) {
+	public Response<XxlJobGroup> jobInfoGroup(Integer jobGroupId) {
 		if ( Objects.isNull(jobGroupId)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBGROUP_GET);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
 	}
 
-	/**
-	 * 添加调度任务组
-	 * @param jobGroup 调度任务组信息Model
-	 * @return	ReturnT 返回结果
-	 */
-	public ReturnT<String> addJobGroup(XxlJobGroup jobGroup) {
+	public Response<String> addJobGroup(XxlJobGroup jobGroup) {
 		if ( Objects.isNull(jobGroup)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器信息不能为空");
+			return Response.ofFail("任务执行器信息不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobGroup), Map.class);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBGROUP_SAVE);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
 	}
 
-	/**
-	 * 更新调度任务组
-	 * @param jobGroup 调度任务组信息Model
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<String> updateJobGroup(XxlJobGroup jobGroup) {
-		// xxl-job admin 请求参数
+	public Response<String> updateJobGroup(XxlJobGroup jobGroup) {
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobGroup), Map.class);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBGROUP_UPDATE);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
 	}
 
-	/**
-	 * 删除调度任务组
-	 * @param jobGroupId 调度任务组ID
-	 * @return	ReturnT 返回结果
-	 */
-	public ReturnT<String> removeJobGroup(Integer jobGroupId) {
+	public Response<String> removeJobGroup(Integer jobGroupId) {
 		if ( Objects.isNull(jobGroupId)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobGroupId);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBGROUP_REMOVE);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
 	}
 
-	/**
-	 * 获取xxl-job 执行器列表数据
-	 * @param start	起始位置
-	 * @param length 数量
-	 * @param jobGroup 执行器主键ID
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup) {
+	public Response<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup) {
 		return this.jobInfoList(start, length, jobGroup, -1, EMPTY, EMPTY, EMPTY);
 	}
 
-	/**
-	 * 获取xxl-job 执行器列表数据
-	 * @param start	起始位置
-	 * @param length 数量
-	 * @param jobGroup 执行器主键ID
-	 * @param triggerStatus 调度状态：0-停止，1-运行
-	 * @return ReturnT 返回结果
-	 */
-    public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup, Integer triggerStatus) {
+    public Response<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup, Integer triggerStatus) {
     	return this.jobInfoList(start, length, jobGroup, triggerStatus, EMPTY, EMPTY, EMPTY);
 	}
 
-	/**
-	 * 获取xxl-job 执行器列表数据
-	 * @param start 起始位置
-	 * @param length 数量
-	 * @param jobGroup 执行器主键ID
-	 * @param triggerStatus 调度状态：0-停止，1-运行
-	 * @param jobDesc 任务描述
-	 * @param executorHandler 执行器任务handler
-	 * @param author 任务创建者
-	 * @return ReturnT 返回结果
-	 */
-    public ReturnT<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup,
+    public Response<XxlJobInfoList> jobInfoList(int start, int length, Integer jobGroup,
 											   Integer triggerStatus, String jobDesc, String executorHandler, String author) {
 		if ( Objects.isNull(jobGroup)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(7);
 		paramMap.put("start", Math.max(0, start));
 		paramMap.put("length", Math.max(length, 5));
@@ -268,212 +172,125 @@ public class XxlJobTemplate {
 		paramMap.put("jobDesc", jobDesc);
 		paramMap.put("executorHandler", executorHandler);
 		paramMap.put("author", author);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_PAGELIST);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
-		return this.doRequest(request, XxlJobInfoList.class);
+		return this.doRequestForPageList(request, XxlJobInfoList.class);
 	}
 
-	/**
-	 * 新增不重复的调度任务
-	 * @param jobInfo 调用任务信息Model
-	 * @return 任务id
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<String> addUniqueJob(XxlJobInfo jobInfo) {
+	public Response<String> addUniqueJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		if ( Objects.isNull(jobInfo.getJobGroup())) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
-		// 1、查询任务组内是否存在相同的任务
-		ReturnT<XxlJobInfoList> returnT1 = this.jobInfoList(0, Integer.MAX_VALUE, jobInfo.getJobGroup());
-		if (returnT1.getCode() == ReturnT.FAIL_CODE) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "获取任务列表失败，失败原因:" + returnT1.getMsg());
+		Response<XxlJobInfoList> returnT1 = this.jobInfoList(0, Integer.MAX_VALUE, jobInfo.getJobGroup());
+		if (!returnT1.isSuccess()) {
+			return Response.ofFail("获取任务列表失败，失败原因:" + returnT1.getMsg());
 		}
-		XxlJobInfoList jobInfoList = returnT1.getContent();
-		// 2、如果任务组内不存在任何的任务，则新增任务
+		XxlJobInfoList jobInfoList = returnT1.getData();
 		if(Objects.isNull(jobInfoList) || CollectionUtils.isEmpty(jobInfoList.getData())) {
 			return this.addJob(jobInfo);
 		}
 		StringUtils.trimWhitespace(jobInfo.getJobDesc());
-		// 3、如果任务组内存在相同的任务，则不新增任务
 		if(jobInfoList.getData().stream().anyMatch(job -> StringUtils.trimWhitespace(job.getJobDesc())
 				.equals(StringUtils.trimWhitespace(jobInfo.getJobDesc())))) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务组内已存在相同描述的任务");
+			return Response.ofFail("任务组内已存在相同描述的任务");
 		}
-		// 4、新增任务
 		return this.addJob(jobInfo);
 	}
 
-	/**
-	 * 新增调度任务
-	 * @param jobInfo 调用任务信息Model
-	 * @return 任务id
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<String> addJob(XxlJobInfo jobInfo) {
+	public Response<String> addJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		if ( Objects.isNull(jobInfo.getJobGroup())) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
+			return Response.ofFail("任务执行器主键ID不能为空");
 		}
 		if ( Objects.isNull(jobInfo.getJobDesc())) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务描述不能为空");
+			return Response.ofFail("任务描述不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_ADD);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
     }
 
-	/**
-	 * 修改调度任务
-	 * @param jobInfo 调用任务信息Model
-	 * @return ReturnT 返回结果
-	 */
-    public ReturnT<String> updateJob(XxlJobInfo jobInfo) {
+    public Response<String> updateJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		if ( Objects.isNull(jobInfo.getId())) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
 		if ( Objects.isNull(jobInfo.getJobDesc())) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务描述不能为空");
+			return Response.ofFail("任务描述不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = JSON.parseObject(JSON.toJSONString(jobInfo), Map.class);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_UPDATE);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
     }
 
-	/**
-	 * 删除调度任务
-	 * @param jobId 任务id
-	 * @return ReturnT 返回结果
-	 */
-    public ReturnT<String> removeJob(Integer jobId) {
+    public Response<String> removeJob(Integer jobId) {
 		if ( Objects.isNull(jobId)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_REMOVE);
-		Request request = this.buildRequestEntity(url,paramMap, false);
-		// xxl-job admin 请求操作
+		Request request = this.buildRequestEntity(url, paramMap, false);
 		return this.doRequest(request);
     }
 
-	/**
-	 * 停止调度
-	 * @param jobId 任务id
-	 * @return ReturnT 返回结果
-	 */
-    public ReturnT<String> stopJob(Integer jobId) {
+    public Response<String> stopJob(Integer jobId) {
 		if ( Objects.isNull(jobId)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_STOP);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
     }
 
-	/**
-	 * 开启调度
-	 * @param jobId 任务id
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<String> startJob(Integer jobId) {
+	public Response<String> startJob(Integer jobId) {
 		if ( Objects.isNull(jobId)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(1);
 		paramMap.put("id", jobId);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_START);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
     }
 
-	/**
-	 *
-	 * 手动触发一次调度
-	 * @param jobInfo 调用任务信息Model
-	 * @return ReturnT 返回结果
-	 */
-	public ReturnT<String> triggerJob(XxlJobInfo jobInfo) {
+	public Response<String> triggerJob(XxlJobInfo jobInfo) {
 		if (Objects.isNull(jobInfo)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务信息不能为空");
+			return Response.ofFail("任务信息不能为空");
 		}
 		return this.triggerJob(jobInfo.getId(), jobInfo.getExecutorParam());
 	}
 
-	/**
-	 * 手动触发一次调度
-	 * @param jobInfoId 调用任务ID
-	 * @param executorParam 执行器参数
-	 * @return ReturnT 返回结果
-	 */
-    public ReturnT<String> triggerJob(Integer jobInfoId, String executorParam) {
+    public Response<String> triggerJob(Integer jobInfoId, String executorParam) {
 		if ( Objects.isNull(jobInfoId)) {
-			return new ReturnT<>(ReturnT.FAIL_CODE, "任务ID不能为空");
+			return Response.ofFail("任务ID不能为空");
 		}
-		// xxl-job admin 请求参数
 		Map<String, Object> paramMap = new HashMap<>(2);
 		paramMap.put("id", jobInfoId);
 		paramMap.put("executorParam", executorParam);
-		// xxl-job admin 请求体
 		String url = this.joinPath(XxlJobConstants.JOBINFO_TRIGGER);
 		Request request = this.buildRequestEntity(url, paramMap, false);
-		// xxl-job admin 请求操作
 		return this.doRequest(request);
     }
 
-	/**
-	 * 构建请求实体
-	 * @param url 调用任务URL
-	 * @param paramMap 执行器参数
-	 * @return ReturnT 返回结果
-	 */
 	private Request buildRequestEntity(String url, Map<String, Object> paramMap) {
 		return this.buildRequestEntity(url, paramMap, false);
 	}
 
-	/**
-	 * 构建请求实体
-	 * @param url 调用任务URL
-	 * @param paramMap 执行器参数
-	 * @param isLoginRequest 是否登录请求
-	 * @return ReturnT 返回结果
-	 */
 	private Request buildRequestEntity(String url, Map<String, Object> paramMap, boolean isLoginRequest) {
-
-		// xxl-job admin 请求头
 		Headers.Builder headers = new Headers.Builder()
 				.add(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken());
-
-		// xxl-job admin 请求体
-
-		// 创建一个RequestBody(参数1：数据类型 参数2传递的json串)
 		FormBody.Builder builder = new FormBody.Builder();
 		for (String key : paramMap.keySet()) {
 			Object obj = paramMap.get(key);
@@ -483,13 +300,9 @@ public class XxlJobTemplate {
 				builder.addEncoded(key, "");
 			}
 		}
-		FormBody  requestBody = builder.build();
-
-		// 创建一个请求对象
+		FormBody requestBody = builder.build();
 		HttpUrl httpUrl = HttpUrl.parse(url);
 		Request.Builder request = new Request.Builder().url(httpUrl).headers(headers.build()).post(requestBody);
-
-		// 非登录请求需要检查登录状态
 		if(!isLoginRequest){
 			this.loginIfNeed(httpUrl, headers, request);
 		}
@@ -497,84 +310,96 @@ public class XxlJobTemplate {
 	}
 
 	private void loginIfNeed(HttpUrl httpUrl, Headers.Builder headers, Request.Builder request) {
-
-		// xxl-job admin cookie
-		CookieJar cookieJar  = okhttp3Client.cookieJar();
+		CookieJar cookieJar = okhttp3Client.cookieJar();
 		List<Cookie> cookies = cookieJar.loadForRequest(httpUrl);
-		// 缓存中的 cookie 不为空，查找我们需要的 cookie
 		if(CollectionUtils.isEmpty(cookies) || cookies.stream().noneMatch(cookie -> XxlJobConstants.XXL_RPC_COOKIE.equals(cookie.name()))){
-			// 缓存中的 cookie 为空，或者缓存中的 cookie 不包含我们需要的 cookie
 			this.login(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember());
 		}
-
 	}
 
-	private <T> ReturnT<T> doRequest(Request request, Class<T> objectClass) {
-		// xxl-job admin 请求操作
+	private <T> Response<T> doRequest(Request request, Class<T> objectClass) {
 		try {
-			// 发送请求获取响应
-			Response response = okhttp3Client.newCall(request).execute();
-			// 请求结果处理
-			// xxl-job admin 请求结果成功
+			okhttp3.Response response = okhttp3Client.newCall(request).execute();
 			if(response.isSuccessful()) {
 				log.info("xxl-job request successful.");
 				String body = response.body().string();
 				log.debug("xxl-job response body: {} .", body);
 				if(isResponseJson(response)){
 					T rt = JSON.parseObject(body, objectClass);
-					return new ReturnT<T>(rt);
+					return Response.ofSuccess(rt);
 				}
 			}
 			log.error("xxl-job request fail.");
-			// xxl-job admin 请求结果失败
-			return new ReturnT<T>(ReturnT.FAIL_CODE, response.toString());
+			return Response.ofFail(response.toString());
 		} catch (IOException e) {
-			return new ReturnT<T>(ReturnT.FAIL_CODE, e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
-	private <T> ReturnT<T> doRequest(Request request) {
-		// xxl-job admin 请求操作
+	/**
+	 * 处理 pageList 接口返回的非 Response 包装的响应（直接是 Map 格式）
+	 * admin 的 /jobgroup/pageList 和 /jobinfo/pageList 返回 {recordsTotal, recordsFiltered, data}
+	 */
+	private <T> Response<T> doRequestForPageList(Request request, Class<T> objectClass) {
 		try {
-			// 发送请求获取响应
-			Response response = okhttp3Client.newCall(request).execute();
-			// 请求结果处理
+			okhttp3.Response response = okhttp3Client.newCall(request).execute();
+			if(response.isSuccessful()) {
+				log.info("xxl-job pageList request successful.");
+				String body = response.body().string();
+				log.debug("xxl-job pageList response body: {} .", body);
+				if(isResponseJson(response)){
+					T result = JSON.parseObject(body, objectClass);
+					return Response.ofSuccess(result);
+				}
+			}
+			log.error("xxl-job pageList request fail.");
+			return Response.ofFail(response.toString());
+		} catch (IOException e) {
+			return Response.ofFail(e.getMessage());
+		}
+	}
+
+	private <T> Response<T> doRequest(Request request) {
+		try {
+			okhttp3.Response response = okhttp3Client.newCall(request).execute();
 			return this.parseResponseEntity(response);
 		} catch (IOException e) {
-			return new ReturnT<T>(ReturnT.FAIL_CODE, e.getMessage());
+			return Response.ofFail(e.getMessage());
 		}
 	}
 
-	private <T> ReturnT<T> parseResponseEntity(Response response) throws IOException {
-		// xxl-job admin 请求结果成功
+	private <T> Response<T> parseResponseEntity(okhttp3.Response response) throws IOException {
 		if(response.isSuccessful()) {
 			log.info("xxl-job request successful.");
 			String body = response.body().string();
 			log.debug("xxl-job response body: {} .", body);
 			if(isResponseJson(response)){
-				ReturnT<T> returnT = JSON.parseObject(body, new TypeReference<ReturnT<T>>() {});
-				return returnT;
+				// 3.4.0 admin 返回 Response{code, msg, data}，其中 data 包含实际内容
+				JSONObject json = JSON.parseObject(body);
+				int code = json.getIntValue("code", 0);
+				String msg = json.getString("msg");
+				// 兼容 3.4.0 (data字段) 和旧版 (content字段)
+				String dataJson = json.getString("data");
+				if (dataJson == null) {
+					dataJson = json.getString("content");
+				}
+				if (code == 200 && dataJson != null) {
+					T data = JSON.parseObject(dataJson, new TypeReference<T>() {});
+					return Response.ofSuccess(data);
+				}
+				return Response.ofFail(msg != null ? msg : "request fail, code:" + code);
 			}
 		}
 		log.error("xxl-job request fail.");
-		// xxl-job admin 请求结果失败
-		return new ReturnT<T>(ReturnT.FAIL_CODE, response.toString());
+		return Response.ofFail(response.toString());
 	}
 
-	/*
-	 * 字符串拼接
-	 *
-	 * @param suffix
-	 * @return
-	 */
 	private String joinPath(String suffix) {
-		String str = "/";
-		String address;
-		if (!adminProperties.getAddresses().endsWith(str)) {
-			address = adminProperties.getAddresses() + str + suffix;
+		String address = adminProperties.getAddresses();
+		if (address.endsWith("/")) {
+			address = address.substring(0, address.length() - 1);
 		}
-		address = adminProperties.getAddresses() + suffix;
-		return address;
+		return address + suffix;
 	}
 
 }

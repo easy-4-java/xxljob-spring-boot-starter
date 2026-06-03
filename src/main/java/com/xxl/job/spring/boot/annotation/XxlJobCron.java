@@ -15,7 +15,7 @@
  */
 package com.xxl.job.spring.boot.annotation;
 
-import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
+import com.xxl.job.core.constant.ExecutorBlockStrategyEnum;
 import com.xxl.job.core.glue.GlueTypeEnum;
 import com.xxl.job.spring.boot.executor.ExecutorRouteStrategyEnum;
 import com.xxl.job.spring.boot.executor.MisfireStrategyEnum;
@@ -23,10 +23,42 @@ import com.xxl.job.spring.boot.executor.ScheduleTypeEnum;
 
 import java.lang.annotation.*;
 
-@Target({ ElementType.TYPE, ElementType.METHOD })
+/**
+ * 增强版 XxlJob 注解，可 100% 替代 @XxlJob
+ * <p>
+ * 使用示例（不再需要 @XxlJob）：
+ * <pre>
+ * &#64;XxlJobCron(value = "myJob", cron = "0/10 * * * * ?", desc = "我的任务", author = "admin")
+ * public void myJob() { ... }
+ * </pre>
+ * <p>
+ * 也可以与 @XxlJob 组合使用（向后兼容），此时 @XxlJobCron.value() 优先作为 JobHandler 名称：
+ * <pre>
+ * &#64;XxlJob("myJob")
+ * &#64;XxlJobCron(cron = "0/10 * * * * ?", desc = "我的任务")
+ * public void myJob() { ... }
+ * </pre>
+ */
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 public @interface XxlJobCron {
+
+	/**
+	 * JobHandler名称，用于在执行器中注册 JobHandler
+	 * <p>当与 @XxlJob 同时使用时，以 @XxlJobCron.value() 为准</p>
+	 */
+	String value() default "";
+
+	/**
+	 * 初始化方法名，JobThread 初始化时调用（等同于 @XxlJob 的 init）
+	 */
+	String init() default "";
+
+	/**
+	 * 销毁方法名，JobThread 销毁时调用（等同于 @XxlJob 的 destroy）
+	 */
+	String destroy() default "";
 
 	/**
 	 * 任务UID编号
@@ -92,6 +124,7 @@ public @interface XxlJobCron {
 	 * 失败重试次数
 	 */
 	int failRetryCount() default 3;
+
 	/**
 	 * 自启动
 	 */

@@ -1,9 +1,12 @@
 package com.xxl.job.spring.boot;
 
 import com.xxl.job.core.handler.annotation.XxlJob;
+import com.xxl.job.spring.boot.annotation.XxlJobCron;
 import com.xxl.job.spring.boot.metrics.MetricMethodJobHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
+import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -22,31 +25,39 @@ public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBinding
     }
 
     @Override
-    protected void registJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
-        if (xxlJob == null) {
+    protected void registryJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
+        // 获取 JobHandler 名称、init/destroy 方法
+        String name = null;
+        String initMethodName = null;
+        String destroyMethodName = null;
+
+        // 优先从 @XxlJob 获取
+        if (xxlJob != null && StringUtils.hasText(xxlJob.value())) {
+            name = xxlJob.value();
+            initMethodName = xxlJob.init();
+            destroyMethodName = xxlJob.destroy();
+        }
+
+        // 如果 @XxlJob 未找到或 value 为空，尝试从 @XxlJobCron 获取
+        if (!StringUtils.hasText(name)) {
+            XxlJobCron xxlJobCron = AnnotationUtils.findAnnotation(executeMethod, XxlJobCron.class);
+            if (xxlJobCron != null && StringUtils.hasText(xxlJobCron.value())) {
+                name = xxlJobCron.value();
+                initMethodName = xxlJobCron.init();
+                destroyMethodName = xxlJobCron.destroy();
+            }
+        }
+
+        if (!StringUtils.hasText(name)) {
             return;
         }
 
-        String name = xxlJob.value();
         //make and simplify the variables since they'll be called several times later
         Class<?> clazz = bean.getClass();
         String methodName = executeMethod.getName();
-        if (name.trim().length() == 0) {
-            throw new RuntimeException("xxl-job method-jobhandler name invalid, for[" + clazz + "#" + methodName + "] .");
-        }
         if (loadJobHandler(name) != null) {
             throw new RuntimeException("xxl-job jobhandler[" + name + "] naming conflicts.");
         }
-
-        // execute method
-        /*if (!(method.getParameterTypes().length == 1 && method.getParameterTypes()[0].isAssignableFrom(String.class))) {
-            throw new RuntimeException("xxl-job method-jobhandler param-classtype invalid, for[" + bean.getClass() + "#" + method.getName() + "] , " +
-                    "The correct method format like \" public ReturnT<String> execute(String param) \" .");
-        }
-        if (!method.getReturnType().isAssignableFrom(ReturnT.class)) {
-            throw new RuntimeException("xxl-job method-jobhandler return-classtype invalid, for[" + bean.getClass() + "#" + method.getName() + "] , " +
-                    "The correct method format like \" public ReturnT<String> execute(String param) \" .");
-        }*/
 
         executeMethod.setAccessible(true);
 
@@ -54,17 +65,17 @@ public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBinding
         Method initMethod = null;
         Method destroyMethod = null;
 
-        if (xxlJob.init().trim().length() > 0) {
+        if (StringUtils.hasText(initMethodName)) {
             try {
-                initMethod = clazz.getDeclaredMethod(xxlJob.init());
+                initMethod = clazz.getDeclaredMethod(initMethodName);
                 initMethod.setAccessible(true);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("xxl-job method-jobhandler initMethod invalid, for[" + clazz + "#" + methodName + "] .");
             }
         }
-        if (xxlJob.destroy().trim().length() > 0) {
+        if (StringUtils.hasText(destroyMethodName)) {
             try {
-                destroyMethod = clazz.getDeclaredMethod(xxlJob.destroy());
+                destroyMethod = clazz.getDeclaredMethod(destroyMethodName);
                 destroyMethod.setAccessible(true);
             } catch (NoSuchMethodException e) {
                 throw new RuntimeException("xxl-job method-jobhandler destroyMethod invalid, for[" + clazz + "#" + methodName + "] .");
@@ -72,7 +83,7 @@ public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBinding
         }
 
         // registry jobhandler
-        registJobHandler(name, new MetricMethodJobHandler(registry, bean, executeMethod, initMethod, destroyMethod, tags));
+        registryJobHandler(name, new MetricMethodJobHandler(registry, bean, executeMethod, initMethod, destroyMethod, tags));
     }
 
 }
