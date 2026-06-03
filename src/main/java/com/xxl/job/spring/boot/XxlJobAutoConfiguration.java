@@ -14,6 +14,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
+
 @Configuration
 @ConditionalOnClass(XxlJobExecutor.class)
 @EnableConfigurationProperties({
@@ -26,10 +31,34 @@ import org.springframework.context.annotation.Configuration;
 @Slf4j
 public class XxlJobAutoConfiguration {
 
-	@Bean(destroyMethod = "shutDown")
+	private SSLContext createTrustAllSslContext() {
+		try {
+			TrustManager[] trustAllCerts = new TrustManager[]{
+				new X509TrustManager() {
+					public X509Certificate[] getAcceptedIssuers() {
+						return new X509Certificate[0];
+					}
+					public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+					public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+				}
+			};
+			SSLContext sslContext = SSLContext.getInstance("TLS");
+			sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+			return sslContext;
+		} catch (Exception e) {
+			log.error("Failed to create trust-all SSL context", e);
+			return null;
+		}
+	}
+
+	@Bean(destroyMethod = "close")
 	@ConditionalOnMissingBean
 	public UnirestInstance unirestInstance() {
 		UnirestInstance instance = Unirest.spawnInstance();
+		SSLContext sslContext = createTrustAllSslContext();
+		if (sslContext != null) {
+			instance.config().sslContext(sslContext);
+		}
 		instance.config()
 				.connectTimeout(10000)
 				.enableCookieManagement(true)
