@@ -74,6 +74,7 @@ public class XxlJobTemplate {
 	}
 
 	private boolean loginIfNeed() {
+		log.debug("xxl-job loginIfNeed: authenticated={}, useV3={}", authenticated, useV3);
 		if (authenticated) {
 			return true;
 		}
@@ -81,64 +82,80 @@ public class XxlJobTemplate {
 			if (authenticated) {
 				return true;
 			}
-			// v2 → v3 自动回退
+			log.info("xxl-job attempting login: admin={}, v2Path={}, v3Path={}",
+					adminProperties.getAddresses(), XxlJobConstants.LOGIN_GET_V2, XxlJobConstants.LOGIN_GET_V3);
 			if (doLogin(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
+				log.info("xxl-job loginIfNeed: v2 login OK");
 				return true;
 			}
+			log.warn("xxl-job loginIfNeed: v2 login FAILED, useV3={}", useV3);
 			if (!useV3) {
-				log.info("xxl-job v2 login failed, trying v3.");
+				log.info("xxl-job loginIfNeed: attempting v3 fallback");
 				if (doLoginV3(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
 					useV3 = true;
+					log.info("xxl-job loginIfNeed: v3 login OK, useV3=true");
 					return true;
 				}
+				log.error("xxl-job loginIfNeed: v3 login also FAILED");
 			}
+			log.error("xxl-job loginIfNeed: all login attempts failed");
 			return false;
 		}
 	}
 
 	private boolean doLogin(String userName, String password, boolean remember) {
+		String url = buildUrl(XxlJobConstants.LOGIN_GET_V2);
+		log.info("xxl-job [v2] login POST {}", url);
 		try {
-			String url = buildUrl(XxlJobConstants.LOGIN_GET_V2);
 			HttpResponse<String> response = unirestInstance.post(url)
 					.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
 					.field("userName", userName)
 					.field("password", password)
 					.field("ifRemember", remember ? "on" : "off")
 					.asString();
+			log.info("xxl-job [v2] login response: status={}, contentType={}, body={}",
+					response.getStatus(),
+					response.getHeaders().getFirst("Content-Type"),
+					response.getBody() != null ? response.getBody().substring(0, Math.min(response.getBody().length(), 200)) : "null");
 			if (response.isSuccess()) {
-				log.info("xxl-job login success (v2).");
+				log.info("xxl-job [v2] login SUCCESS");
 				authenticated = true;
 				return true;
 			}
-			log.warn("xxl-job login fail (v2). status:{}", response.getStatus());
+			log.warn("xxl-job [v2] login FAIL: status={}", response.getStatus());
 			authenticated = false;
 			return false;
 		} catch (Exception e) {
-			log.error("xxl-job login error (v2).", e);
+			log.error("xxl-job [v2] login ERROR: {}", e.getMessage(), e);
 			authenticated = false;
 			return false;
 		}
 	}
 
 	private boolean doLoginV3(String userName, String password, boolean remember) {
+		String url = buildUrl(XxlJobConstants.LOGIN_GET_V3);
+		log.info("xxl-job [v3] login POST {}", url);
 		try {
-			String url = buildUrl(XxlJobConstants.LOGIN_GET_V3);
 			HttpResponse<String> response = unirestInstance.post(url)
 					.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
 					.field("userName", userName)
 					.field("password", password)
 					.field("ifRemember", remember ? "on" : "off")
 					.asString();
+			log.info("xxl-job [v3] login response: status={}, contentType={}, body={}",
+					response.getStatus(),
+					response.getHeaders().getFirst("Content-Type"),
+					response.getBody() != null ? response.getBody().substring(0, Math.min(response.getBody().length(), 200)) : "null");
 			if (response.isSuccess()) {
-				log.info("xxl-job login success (v3).");
+				log.info("xxl-job [v3] login SUCCESS");
 				authenticated = true;
 				return true;
 			}
-			log.warn("xxl-job login fail (v3). status:{}", response.getStatus());
+			log.warn("xxl-job [v3] login FAIL: status={}", response.getStatus());
 			authenticated = false;
 			return false;
 		} catch (Exception e) {
-			log.error("xxl-job login error (v3).", e);
+			log.error("xxl-job [v3] login ERROR: {}", e.getMessage(), e);
 			authenticated = false;
 			return false;
 		}
@@ -172,6 +189,7 @@ public class XxlJobTemplate {
 	}
 
 	private HttpResponse<String> doPost(String suffix, Map<String, Object> paramMap, boolean isLoginRequest) {
+		log.debug("xxl-job doPost: suffix={}, isLogin={}, useV3={}", suffix, isLoginRequest, useV3);
 		String url = buildUrl(suffix);
 		if (!isLoginRequest) {
 			if (!loginIfNeed()) {
