@@ -487,8 +487,15 @@ public class XxlJobTemplate {
 				String body = response.getBody();
 				log.debug("xxl-job pageList response body: {} .", body);
 				if (isResponseJson(response)) {
-					T result = JSON.parseObject(body, objectClass);
-					return new ReturnT<>(result);
+					com.alibaba.fastjson2.JSONObject pageJson = JSON.parseObject(body);
+					// v3: {"code":200, "data": {...}} unwrap outer
+					String innerData = pageJson.getString("data");
+					if (innerData != null && pageJson.containsKey("code")) {
+						T result = JSON.parseObject(innerData, objectClass);
+						return new ReturnT<>(result);
+					}
+					// v2: direct Map format
+					
 				}
 				log.error("xxl-job pageList returned non-JSON response. url suffix:{}, body:{}", suffix, body);
 			}
