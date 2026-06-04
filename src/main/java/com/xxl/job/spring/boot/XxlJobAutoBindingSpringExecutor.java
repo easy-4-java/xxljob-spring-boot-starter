@@ -276,8 +276,12 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                     return;
                 }
                 jobGroupList = returnT1.getContent();
-            } else {
-                jobGroupId = jobGroupList.getData().stream().filter(xxlJobGroup -> xxlJobGroup.getAppName().equals(appName)).findFirst().get().getId();
+            }
+            // 从搜索结果中提取 jobGroupId（创建新组或已有组都需提取）
+            if (Objects.nonNull(jobGroupList) && !CollectionUtils.isEmpty(jobGroupList.getData())) {
+                jobGroupId = jobGroupList.getData().stream()
+                        .filter(xxlJobGroup -> xxlJobGroup.getAppName().equals(appName))
+                        .findFirst().map(XxlJobGroup::getId).orElse(null);
             }
             // 定时任务是否存在
             ReturnT<XxlJobInfoList> returnT3 = getXxlJobTemplate().jobInfoList(0, Integer.MAX_VALUE, jobGroupId);
