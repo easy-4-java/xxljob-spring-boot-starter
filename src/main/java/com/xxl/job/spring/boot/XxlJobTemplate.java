@@ -439,6 +439,14 @@ public class XxlJobTemplate {
 		return new ReturnT<>(code, msg);
 	}
 
+	private void putJobIdParam(Map<String, Object> paramMap, Integer jobId) {
+		if (useV3) {
+			paramMap.put("ids[]", Collections.singletonList(jobId));
+		} else {
+			paramMap.put("id", jobId);
+		}
+	}
+
 	private String errorMsg(HttpResponse<String> response) {
 		String statusText = response.getStatusText();
 		if (statusText != null && !statusText.isEmpty()) {
