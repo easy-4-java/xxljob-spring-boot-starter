@@ -43,6 +43,7 @@ public class XxlJobTemplate {
 
 	private final Object loginLock = new Object();
 	private volatile boolean authenticated = false;
+	private volatile String ssoToken = null; // v3 login token
 
 	public XxlJobTemplate(UnirestInstance unirestInstance,
 						   XxlJobProperties properties,
@@ -118,6 +119,14 @@ public class XxlJobTemplate {
 			if (response.isSuccess()) {
 				log.info("xxl-job login SUCCESS");
 				authenticated = true;
+				// v3: 提取 xxl_job_login_token, 备用（Unirest CookieManager 可能不自动携带）
+				for (String ch : response.getHeaders().get("Set-Cookie")) {
+					if (ch != null && ch.startsWith("xxl_job_login_token=")) {
+						ssoToken = ch.split(";")[0].substring("xxl_job_login_token=".length());
+						log.info("xxl-job extracted ssoToken");
+						break;
+					}
+				}
 				return true;
 			}
 			log.error("xxl-job login FAIL: status={}", response.getStatus());
@@ -158,10 +167,12 @@ public class XxlJobTemplate {
 	}
 
 	private HttpResponse<String> executePost(String url, Map<String, Object> paramMap) {
-		return unirestInstance.post(url)
-				.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
-				.fields(paramMap)
-				.asString();
+		kong.unirest.HttpRequestWithBody req = unirestInstance.post(url)
+				.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken());
+		if (isV3() && ssoToken != null) {
+			req.cookie("xxl_job_login_token", ssoToken);
+		}
+		return req.fields(paramMap).asString();
 	}
 
 	private boolean isResponseJson(HttpResponse<String> r) {
