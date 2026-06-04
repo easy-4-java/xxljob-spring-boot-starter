@@ -45,6 +45,7 @@ public class XxlJobTemplate {
 
 	// 自动检测 admin 版本：默认 v2，首次 404 后切换到 v3
 	private volatile boolean useV3 = false;
+	private volatile String ssoToken = null; // v3 login token cookie value
 	private static final java.util.Map<String, String> V2_TO_V3 = new java.util.HashMap<>();
 	static {
 		V2_TO_V3.put(XxlJobConstants.LOGIN_GET_V2, XxlJobConstants.LOGIN_GET_V3);
@@ -147,7 +148,15 @@ public class XxlJobTemplate {
 					response.getHeaders().getFirst("Content-Type"),
 					response.getBody() != null ? response.getBody().substring(0, Math.min(response.getBody().length(), 200)) : "null");
 			if (response.isSuccess()) {
-				log.info("xxl-job [v3] login SUCCESS");
+				// 提取 xxl_job_login_token，后续请求手动注入
+				for (String cookieHeader : response.getHeaders().get("Set-Cookie")) {
+					if (cookieHeader != null && cookieHeader.startsWith("xxl_job_login_token=")) {
+						ssoToken = cookieHeader.split(";")[0].substring("xxl_job_login_token=".length());
+						log.info("xxl-job [v3] extracted ssoToken length={}", ssoToken != null ? ssoToken.length() : 0);
+						break;
+					}
+				}
+				log.info("xxl-job [v3] login SUCCESS, ssoToken={}", ssoToken != null);
 				authenticated = true;
 				return true;
 			}
@@ -190,6 +199,10 @@ public class XxlJobTemplate {
 
 	private HttpResponse<String> doPost(String suffix, Map<String, Object> paramMap, boolean isLoginRequest) {
 		log.debug("xxl-job doPost: suffix={}, isLogin={}, useV3={}", suffix, isLoginRequest, useV3);
+		// 如果已切换到 v3，自动将 v2 路径映射到 v3
+		if (useV3 && V2_TO_V3.containsKey(suffix)) {
+			suffix = V2_TO_V3.get(suffix);
+		}
 		String url = buildUrl(suffix);
 		if (!isLoginRequest) {
 			if (!loginIfNeed()) {
@@ -229,10 +242,13 @@ public class XxlJobTemplate {
 	}
 
 	private HttpResponse<String> executePost(String url, Map<String, Object> paramMap) {
-		return unirestInstance.post(url)
-				.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken())
-				.fields(paramMap)
-				.asString();
+		kong.unirest.HttpRequestWithBody req = unirestInstance.post(url)
+				.header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken());
+		// v3 admin 需要 xxl_job_login_token cookie（Unirest 的 CookieManager 可能不自动携带）
+		if (useV3 && ssoToken != null) {
+			req.cookie("xxl_job_login_token", ssoToken);
+		}
+		return req.fields(paramMap).asString();
 	}
 
 	private boolean isResponseJson(HttpResponse<String> response) {
