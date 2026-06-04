@@ -37,6 +37,8 @@ import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Xxl Job Handler 自动注册
@@ -56,6 +58,23 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
     private String appTitle;
     private List<XxlJobInfo> cacheJobs = new ArrayList<>();
     private Random RANDOM_ORDER = new Random(10);
+
+    // 自愈：记录注册失败的任务，定时重试
+    private final List<FailedJob> failedJobs = new CopyOnWriteArrayList<>();
+    private final ScheduledExecutorService retryScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "xxl-job-self-healing");
+        t.setDaemon(true);
+        return t;
+    });
+    private final AtomicBoolean retryRunning = new AtomicBoolean(false);
+    private static final int MAX_RETRY = 10;
+
+    private static class FailedJob {
+        final XxlJobInfo jobInfo;
+        final boolean isNew; // true=add, false=update
+        int retryCount;
+        FailedJob(XxlJobInfo jobInfo, boolean isNew) { this.jobInfo = jobInfo; this.isNew = isNew; }
+    }
 
     public XxlJobAutoBindingSpringExecutor(XxlJobTemplate xxlJobTemplate) {
         this.xxlJobTemplate = xxlJobTemplate;
@@ -302,10 +321,10 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                         || jobInfoList.getData().stream().noneMatch(jobInfo -> jobInfo.getExecutorHandler().equals(xxlJobInfo.getExecutorHandler()))
                 ) {
                     log.info(">>>>>>>>>>> 不存在 ExecutorHandler = {} 的定时任务，开始自动添加！", xxlJobInfo.getExecutorHandler());
-                    // 自动添加定时任务
                     ReturnT<String> returnT4 = getXxlJobTemplate().addJob(xxlJobInfo);
                     if (returnT4.getCode() == ReturnT.FAIL_CODE) {
                         log.error(">>>>>>>>>>> 自动添加 ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
+                        failedJobs.add(new FailedJob(xxlJobInfo, true));
                     } else {
                         log.info(">>>>>>>>>>> 自动添加 ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getExecutorHandler());
                         xxlJobInfo.setId(Integer.valueOf(returnT4.getContent()));
@@ -319,6 +338,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                     ReturnT<String> returnT4 = getXxlJobTemplate().updateJob(xxlJobInfo);
                     if (returnT4.getCode() == ReturnT.FAIL_CODE) {
                         log.error(">>>>>>>>>>> 自动更新 JobId = {}, ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
+                        failedJobs.add(new FailedJob(xxlJobInfo, false));
                     } else {
                         log.info(">>>>>>>>>>> 自动更新 JobId = {}, ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler());
                     }
@@ -336,9 +356,50 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
 
             }
 
+            // 启动自愈重试调度器
+            startRetryScheduler();
+
         } catch (Exception ex) {
             log.error(ex.getMessage());
         }
+    }
+
+    private void startRetryScheduler() {
+        if (!retryRunning.compareAndSet(false, true)) {
+            return;
+        }
+        log.info(">>>>>>>>>>> xxl-job self-healing scheduler started, failed jobs: {}", failedJobs.size());
+        retryScheduler.scheduleWithFixedDelay(() -> {
+            if (failedJobs.isEmpty()) {
+                return;
+            }
+            log.info(">>>>>>>>>>> xxl-job self-healing retry: {} pending jobs", failedJobs.size());
+            List<FailedJob> snapshot = new ArrayList<>(failedJobs);
+            for (FailedJob fj : snapshot) {
+                try {
+                    if (fj.retryCount >= MAX_RETRY) {
+                        log.warn(">>>>>>>>>>> xxl-job self-healing: handler={} exceeded max retries, giving up", fj.jobInfo.getExecutorHandler());
+                        failedJobs.remove(fj);
+                        continue;
+                    }
+                    fj.retryCount++;
+                    ReturnT<String> result;
+                    if (fj.isNew) {
+                        result = getXxlJobTemplate().addJob(fj.jobInfo);
+                    } else {
+                        result = getXxlJobTemplate().updateJob(fj.jobInfo);
+                    }
+                    if (result.getCode() == ReturnT.SUCCESS_CODE) {
+                        log.warn(">>>>>>>>>>> xxl-job self-healing SUCCESS: handler={} (retry #{})", fj.jobInfo.getExecutorHandler(), fj.retryCount);
+                        failedJobs.remove(fj);
+                    } else {
+                        log.warn(">>>>>>>>>>> xxl-job self-healing retry #{}: handler={} still failed: {}", fj.retryCount, fj.jobInfo.getExecutorHandler(), result.getMsg());
+                    }
+                } catch (Exception e) {
+                    log.error(">>>>>>>>>>> xxl-job self-healing retry error: handler={}", fj.jobInfo.getExecutorHandler(), e);
+                }
+            }
+        }, 60, 60, TimeUnit.SECONDS);
     }
 
     public XxlJobTemplate getXxlJobTemplate() {
