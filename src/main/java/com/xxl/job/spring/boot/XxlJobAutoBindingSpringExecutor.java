@@ -341,7 +341,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 if (xxlJobInfo.isSelfStarting() && Objects.nonNull(xxlJobInfo.getId())) {
                     ReturnT<String> returnT4 = getXxlJobTemplate().startJob(xxlJobInfo.getId());
                     if (returnT4.getCode() == ReturnT.FAIL_CODE) {
-                        log.error(">>>>>>>>>>> 自动启动  ExecutorHandler = {} 的定时任务失败!失败原因:{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
+                        log.warn(">>>>>>>>>>> 自动启动  ExecutorHandler = {} 的定时任务失败(可忽略):{}", xxlJobInfo.getExecutorHandler(), returnT4.getMsg());
                     } else {
                         log.info(">>>>>>>>>>> 自动启动 ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getExecutorHandler());
                     }
