@@ -91,13 +91,13 @@ public class XxlJobTemplate {
 			}
 			log.warn("xxl-job loginIfNeed: v2 login FAILED, useV3={}", useV3);
 			if (!useV3) {
-				log.info("xxl-job loginIfNeed: attempting v3 fallback");
+				log.warn("xxl-job loginIfNeed: attempting v3 fallback");
 				if (doLoginV3(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
 					useV3 = true;
 					log.info("xxl-job loginIfNeed: v3 login OK, useV3=true");
 					return true;
 				}
-				log.error("xxl-job loginIfNeed: v3 login also FAILED");
+				log.warn("xxl-job loginIfNeed: v3 login also FAILED");
 			}
 			log.error("xxl-job loginIfNeed: all login attempts failed");
 			return false;
@@ -156,7 +156,7 @@ public class XxlJobTemplate {
 						break;
 					}
 				}
-				log.info("xxl-job [v3] login SUCCESS, ssoToken={}", ssoToken != null);
+				log.warn("xxl-job [v3] login SUCCESS, ssoToken={}", ssoToken != null);
 				authenticated = true;
 				return true;
 			}
