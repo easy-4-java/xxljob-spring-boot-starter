@@ -86,7 +86,7 @@ public class XxlJobTemplate {
 			log.info("xxl-job attempting login: admin={}, v2Path={}, v3Path={}",
 					adminProperties.getAddresses(), XxlJobConstants.LOGIN_GET_V2, XxlJobConstants.LOGIN_GET_V3);
 			if (doLogin(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
-				log.info("xxl-job loginIfNeed: v2 login OK");
+				log.warn("xxl-job loginIfNeed: v2 login OK");
 				return true;
 			}
 			log.warn("xxl-job loginIfNeed: v2 login FAILED, useV3={}", useV3);
@@ -94,7 +94,7 @@ public class XxlJobTemplate {
 				log.info("xxl-job loginIfNeed: attempting v3 fallback");
 				if (doLoginV3(adminProperties.getUsername(), adminProperties.getPassword(), adminProperties.isRemember())) {
 					useV3 = true;
-					log.info("xxl-job loginIfNeed: v3 login OK, useV3=true");
+					log.warn("xxl-job loginIfNeed: v3 login OK, useV3=true");
 					return true;
 				}
 				log.error("xxl-job loginIfNeed: v3 login also FAILED");
@@ -119,11 +119,11 @@ public class XxlJobTemplate {
 					response.getHeaders().getFirst("Content-Type"),
 					response.getBody() != null ? response.getBody().substring(0, Math.min(response.getBody().length(), 200)) : "null");
 			if (response.isSuccess()) {
-				log.info("xxl-job [v2] login SUCCESS");
+				log.warn("xxl-job [v2] login SUCCESS");
 				authenticated = true;
 				return true;
 			}
-			log.warn("xxl-job [v2] login FAIL: status={}", response.getStatus());
+			log.error("xxl-job [v2] login FAIL: status={}", response.getStatus());
 			authenticated = false;
 			return false;
 		} catch (Exception e) {
@@ -156,11 +156,11 @@ public class XxlJobTemplate {
 						break;
 					}
 				}
-				log.info("xxl-job [v3] login SUCCESS, ssoToken={}", ssoToken != null);
+				log.warn("xxl-job [v3] login SUCCESS, ssoToken={}", ssoToken != null);
 				authenticated = true;
 				return true;
 			}
-			log.warn("xxl-job [v3] login FAIL: status={}", response.getStatus());
+			log.error("xxl-job [v3] login FAIL: status={}", response.getStatus());
 			authenticated = false;
 			return false;
 		} catch (Exception e) {
