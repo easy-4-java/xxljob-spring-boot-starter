@@ -116,7 +116,7 @@ public class XxlJobTemplate {
 
 	// ======================== 3.x 参数: ids[] ========================
 
-	private void putIdParam(Map<String, Object> p, Integer id) { p.put("ids[]", Collections.singletonList(id)); }
+	private void putIdParam(Map<String, Object> p, Integer id) { p.put("ids[]", String.valueOf(id)); }
 
 	// ======================== 响应解析 ========================
 
@@ -124,9 +124,19 @@ public class XxlJobTemplate {
 		JSONObject json = JSON.parseObject(body);
 		int code = json.getIntValue("code", 500);
 		String msg = json.getString("msg");
-		String inner = json.getString("data");
-		if (inner == null) inner = json.getString("content");
-		if (inner != null) { T data = JSON.parseObject(inner, new TypeReference<T>() {}); return Response.ofSuccess(data); }
+		String content = json.getString("data");
+		if (content == null) content = json.getString("content");
+		if (content != null) {
+			// fastjson2 将 JSON 数字 "1" 解析为 Integer，使用 getObject 保留类型安全
+			Object raw = json.get("data");
+			if (raw == null) raw = json.get("content");
+			if (raw instanceof Number) {
+				raw = String.valueOf(raw);
+			}
+			@SuppressWarnings("unchecked")
+			T data = (T) raw;
+			return Response.ofSuccess(data);
+		}
 		return code == 200 ? Response.ofSuccess(null) : Response.of(500, msg);
 	}
 
