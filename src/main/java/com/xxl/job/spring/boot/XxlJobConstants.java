@@ -1,8 +1,8 @@
 package com.xxl.job.spring.boot;
 
-/**
- * 任务调度平台常量类
- */
+import java.util.HashMap;
+import java.util.Map;
+
 public class XxlJobConstants {
 
     private XxlJobConstants() {
@@ -11,92 +11,48 @@ public class XxlJobConstants {
     public static final String XXL_RPC_COOKIE = "XXL_JOB_LOGIN_IDENTITY";
     public static final String XXL_RPC_ACCESS_TOKEN = "XXL-RPC-ACCESS-TOKEN";
 
-    /**
-     * 任务调度平台默认跨平台Http任务处理器
-     */
     public static final String DEFAULT_HTTP_JOB_HANDLER = "evaluationHttpJobHandler";
-
-    /**
-     * 任务调度平台默认运行模式(BEAN模式)
-     */
     public static final String DEFAULT_GLUE_TYPE = "BEAN";
 
-
-    /**
-     * 任务调度平台API-登录
-     */
-    public static final String LOGIN_GET = "/auth/doLogin";
-
-    /**
-     * 任务调度平台API-注销
-     */
-    public static final String LOGOUT_GET = "/auth/logout";
-
-    /**
-     * 任务调度平台API-任务组列表
-     */
+    // === 公共路径（v2/v3 相同） ===
     public static final String JOBGROUP_PAGELIST = "/jobgroup/pageList";
-
-    /**
-     * 任务调度平台API-新增任务组
-     */
-    public static final String JOBGROUP_SAVE = "/jobgroup/insert";
-
-    /**
-     * 任务调度平台API-更新任务组
-     */
     public static final String JOBGROUP_UPDATE = "/jobgroup/update";
-
-    /**
-     * 任务调度平台API-移除任务组
-     */
-    public static final String JOBGROUP_REMOVE = "/jobgroup/delete";
-
-    /**
-     * 任务调度平台API-查询任务组
-     */
     public static final String JOBGROUP_GET = "/jobgroup/loadById";
-
-
-    /**
-     * 任务调度平台API-执行器列表
-     */
     public static final String JOBINFO_EXECUTOR_LIST = "/jobinfo/executorList";
-
-    /**
-     * 任务调度平台API-任务列表
-     */
     public static String JOBINFO_PAGELIST = "/jobinfo/pageList";
-
-    /**
-     * 任务调度平台API-新增任务
-     */
-    public static final String JOBINFO_ADD = "/jobinfo/insert";
-
-    /**
-     * 任务调度平台API-修改任务
-     */
     public static final String JOBINFO_UPDATE = "/jobinfo/update";
-
-    /**
-     * 任务调度平台API-删除任务
-     */
-    public static final String JOBINFO_REMOVE = "/jobinfo/delete";
-
-    /**
-     * 任务调度平台API-停止任务
-     */
     public static final String JOBINFO_STOP = "/jobinfo/stop";
-
-    /**
-     * 任务调度平台API-开启任务
-     */
     public static final String JOBINFO_START = "/jobinfo/start";
-
-    /**
-     * 任务调度平台API-触发一次任务
-     */
     public static final String JOBINFO_TRIGGER = "/jobinfo/trigger";
 
+    // === 版本差异路径 ===
+    private static final Map<AdminVersion, String> LOGIN_PATHS = new HashMap<>();
+    private static final Map<AdminVersion, String> LOGOUT_PATHS = new HashMap<>();
+    private static final Map<AdminVersion, String> JOBGROUP_SAVE_PATHS = new HashMap<>();
+    private static final Map<AdminVersion, String> JOBGROUP_REMOVE_PATHS = new HashMap<>();
+    private static final Map<AdminVersion, String> JOBINFO_ADD_PATHS = new HashMap<>();
+    private static final Map<AdminVersion, String> JOBINFO_REMOVE_PATHS = new HashMap<>();
+
+    static {
+        LOGIN_PATHS.put(AdminVersion.V2_X, "/login");
+        LOGIN_PATHS.put(AdminVersion.V3_X, "/auth/doLogin");
+        LOGOUT_PATHS.put(AdminVersion.V2_X, "/logout");
+        LOGOUT_PATHS.put(AdminVersion.V3_X, "/auth/logout");
+        JOBGROUP_SAVE_PATHS.put(AdminVersion.V2_X, "/jobgroup/save");
+        JOBGROUP_SAVE_PATHS.put(AdminVersion.V3_X, "/jobgroup/insert");
+        JOBGROUP_REMOVE_PATHS.put(AdminVersion.V2_X, "/jobgroup/remove");
+        JOBGROUP_REMOVE_PATHS.put(AdminVersion.V3_X, "/jobgroup/delete");
+        JOBINFO_ADD_PATHS.put(AdminVersion.V2_X, "/jobinfo/add");
+        JOBINFO_ADD_PATHS.put(AdminVersion.V3_X, "/jobinfo/insert");
+        JOBINFO_REMOVE_PATHS.put(AdminVersion.V2_X, "/jobinfo/remove");
+        JOBINFO_REMOVE_PATHS.put(AdminVersion.V3_X, "/jobinfo/delete");
+    }
+
+    public static String loginPath(AdminVersion v) { return LOGIN_PATHS.getOrDefault(v, "/auth/doLogin"); }
+    public static String logoutPath(AdminVersion v) { return LOGOUT_PATHS.getOrDefault(v, "/auth/logout"); }
+    public static String jobGroupSavePath(AdminVersion v) { return JOBGROUP_SAVE_PATHS.getOrDefault(v, "/jobgroup/insert"); }
+    public static String jobGroupRemovePath(AdminVersion v) { return JOBGROUP_REMOVE_PATHS.getOrDefault(v, "/jobgroup/delete"); }
+    public static String jobInfoAddPath(AdminVersion v) { return JOBINFO_ADD_PATHS.getOrDefault(v, "/jobinfo/insert"); }
+    public static String jobInfoRemovePath(AdminVersion v) { return JOBINFO_REMOVE_PATHS.getOrDefault(v, "/jobinfo/delete"); }
 
 }
