@@ -192,7 +192,7 @@ public class XxlJobTemplate {
 	// ======================== v2/v3 参数差异 ========================
 
 	private void putIdParam(Map<String, Object> paramMap, Integer id) {
-		if (isV3()) paramMap.put("ids[]", Collections.singletonList(id));
+		if (isV3()) paramMap.put("ids[]", String.valueOf(id));
 		else paramMap.put("id", id);
 	}
 
@@ -202,10 +202,17 @@ public class XxlJobTemplate {
 		JSONObject json = JSON.parseObject(body);
 		int code = json.getIntValue("code", ReturnT.FAIL_CODE);
 		String msg = json.getString("msg");
-		String inner = json.getString("data");
-		if (inner == null) inner = json.getString("content");
-		if (inner != null) {
-			T data = JSON.parseObject(inner, new TypeReference<T>() {});
+		String content = json.getString("data");
+		if (content == null) content = json.getString("content");
+		if (content != null) {
+			// fastjson2 将 JSON 数字 "1" 解析为 Integer，使用 getObject 保留类型安全
+			Object raw = json.get("data");
+			if (raw == null) raw = json.get("content");
+			if (raw instanceof Number) {
+				raw = String.valueOf(raw);
+			}
+			@SuppressWarnings("unchecked")
+			T data = (T) raw;
 			return new ReturnT<>(data);
 		}
 		return new ReturnT<>(code, msg);

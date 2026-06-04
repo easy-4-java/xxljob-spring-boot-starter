@@ -1,24 +1,20 @@
 server:
   port: 31734
-#XXL-JOB
+spring:
+  application:
+    name: xxl-job-test-verify
 xxl:
   job:
-    enabled: true
-    accessToken: default_token
+    accessToken: khQTDSfajbcJ88ts
     admin:
-      addresses: http://192.168.3.100:31942/xxl-job-admin
+      addresses: http://192.168.3.116:31505/xxl-job-admin
       username: admin
       password: 123456
-      cookie-cache:
-        maximum-size: 1000
-        expire-after-write: 5s
-        refresh-after-write: 5s
+      version: V3_X
     executor:
-      title: 测试任务执行器
-      address:
-      ip:
-      appname: ${spring.application.name}
-      port: 31734
-      logpath: /data/logs/xxl-job/jobhandler
-      logretentiondays: 30
-      callbackTokenAddress: http://192.168.3.100:30366/auth/jwt/token
+      enabled: true
+      title: 自测验证执行器
+      appname: xxl-job-test-verify
+      port: -1
+      logpath: /tmp/xxl-job-test-verify/logs
+      logretentiondays: 1
