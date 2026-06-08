@@ -78,7 +78,7 @@ public class XxlJobMetrics implements MeterBinder, ApplicationListener<Applicati
 				ReflectionUtils.makeAccessible(field);
 				Object queue = field.get(m);
 				if (Objects.nonNull(queue) && queue instanceof LinkedBlockingQueue) {
-					return ((LinkedBlockingQueue) queue).size();
+					return ((LinkedBlockingQueue<?>) queue).size();
 				}
 				return 0;
 			} catch (Exception e) {
