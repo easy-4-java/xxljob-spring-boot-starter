@@ -116,7 +116,7 @@ public @interface XxlJobCron {
 	MisfireStrategyEnum misfireStrategy() default MisfireStrategyEnum.DO_NOTHING;
 
 	/**
-	 * 任务执行超时时间，单位秒
+	 * 任务执行超时时间，单位毫秒
 	 */
 	int timeout() default 3000;
 

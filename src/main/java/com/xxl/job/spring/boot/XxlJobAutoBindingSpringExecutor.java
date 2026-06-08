@@ -25,8 +25,12 @@ import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;
 import com.xxl.job.spring.boot.model.XxlJobInfoList;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.MethodIntrospector;
@@ -51,13 +55,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author ： <a href="https://github.com/hiwepy">wandl</a>
  */
 @Slf4j
-public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
+public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor implements DisposableBean {
 
-    private XxlJobTemplate xxlJobTemplate;
+    @Getter
+    private final XxlJobTemplate xxlJobTemplate;
     private String appName;
+    @Setter
     private String appTitle;
-    private List<XxlJobInfo> cacheJobs = new ArrayList<>();
-    private Random RANDOM_ORDER = new Random(10);
+    private final List<XxlJobInfo> cacheJobs = new ArrayList<>();
+    private final Random RANDOM_ORDER = new Random(10);
 
     // 自愈：记录注册失败的任务，定时重试（只查询+添加，不更新）
     private final List<XxlJobInfo> failedJobs = new CopyOnWriteArrayList<>();
@@ -77,10 +83,6 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
     public void setAppname(String appName) {
         super.setAppname(appName);
         this.appName = appName;
-    }
-
-    public void setAppTitle(String appTitle) {
-        this.appTitle = appTitle;
     }
 
     // start
@@ -127,7 +129,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                 xxlJobMethods = MethodIntrospector.selectMethods(bean.getClass(),
                         new MethodIntrospector.MetadataLookup<XxlJob>() {
                             @Override
-                            public XxlJob inspect(Method method) {
+                            public XxlJob inspect(@NonNull Method method) {
                                 return AnnotatedElementUtils.findMergedAnnotation(method, XxlJob.class);
                             }
                         });
@@ -140,13 +142,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             // ============================================================
             Map<Method, XxlJobCron> xxlJobCronMethods = null;
             try {
-                xxlJobCronMethods = MethodIntrospector.selectMethods(bean.getClass(),
-                        new MethodIntrospector.MetadataLookup<XxlJobCron>() {
-                            @Override
-                            public XxlJobCron inspect(Method method) {
-                                return AnnotationUtils.findAnnotation(method, XxlJobCron.class);
-                            }
-                        });
+                xxlJobCronMethods = MethodIntrospector.selectMethods(bean.getClass(), (MethodIntrospector.MetadataLookup<XxlJobCron>) method -> AnnotationUtils.findAnnotation(method, XxlJobCron.class));
             } catch (Throwable ex) {
                 log.error("xxl-job XxlJobCron resolve error for bean[" + beanDefinitionName + "].", ex);
             }
@@ -246,7 +242,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             xxlJobInfo.setSelfStarting(xxlJobCron.selfStarting());
             cacheJobs.add(xxlJobInfo);
         } catch (Exception ex) {
-            log.error(ex.getMessage());
+            log.error(">>>>>>>>>>> 构建定时任务信息失败, handler={}", xxlJobCron.value(), ex);
         }
     }
 
@@ -295,6 +291,10 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                         .filter(xxlJobGroup -> xxlJobGroup.getAppName().equals(appName))
                         .findFirst().map(XxlJobGroup::getId).orElse(null);
             }
+            if (Objects.isNull(jobGroupId)) {
+                log.error(">>>>>>>>>>> 无法获取执行器'{}'的 jobGroupId，跳过定时任务注册", appName);
+                return;
+            }
             // 定时任务是否存在
             ReturnT<XxlJobInfoList> returnT3 = getXxlJobTemplate().jobInfoList(0, Integer.MAX_VALUE, jobGroupId);
             if (returnT3.getCode() == ReturnT.FAIL_CODE) {
@@ -320,10 +320,18 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
                         failedJobs.add(xxlJobInfo);
                     } else {
                         log.info(">>>>>>>>>>> 自动添加 ExecutorHandler = {} 的定时任务成功!", xxlJobInfo.getExecutorHandler());
-                        xxlJobInfo.setId(Integer.valueOf(returnT4.getContent()));
+                        try {
+                            xxlJobInfo.setId(Integer.valueOf(returnT4.getContent()));
+                        } catch (NumberFormatException nfe) {
+                            log.warn(">>>>>>>>>>> 解析 JobId 失败: {}", returnT4.getContent(), nfe);
+                        }
                     }
                 } else {
                     Optional<XxlJobInfo> optional = jobInfoList.getData().stream().filter(jobInfo -> jobInfo.getExecutorHandler().equals(xxlJobInfo.getExecutorHandler())).findFirst();
+                    if (!optional.isPresent()) {
+                        log.warn(">>>>>>>>>>> ExecutorHandler = {} 在 noneMatch 判断后未找到匹配项，跳过更新", xxlJobInfo.getExecutorHandler());
+                        continue;
+                    }
                     xxlJobInfo.setId(optional.get().getId());
 
                     log.info(">>>>>>>>>>> 存在 JobId = {}, ExecutorHandler = {} 的定时任务，开始自动更新！", xxlJobInfo.getId(), xxlJobInfo.getExecutorHandler());
@@ -353,7 +361,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
             startRetryScheduler();
 
         } catch (Exception ex) {
-            log.error(ex.getMessage());
+            log.error(">>>>>>>>>>> 定时任务注册到 Admin 失败", ex);
         }
     }
 
@@ -397,8 +405,11 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor {
         }, 60, 60, TimeUnit.SECONDS);
     }
 
-    public XxlJobTemplate getXxlJobTemplate() {
-        return xxlJobTemplate;
+    @Override
+    public void destroy() {
+        retryRunning.set(false);
+        retryScheduler.shutdownNow();
+        log.info(">>>>>>>>>>> xxl-job self-healing scheduler stopped.");
     }
 
     /**
