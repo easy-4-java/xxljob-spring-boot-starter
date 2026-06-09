@@ -51,11 +51,11 @@ public class XxlJobExecutorProperties {
 	/**
 	 * 	执行器运行日志文件存储磁盘路径 [选填] ：需要对该路径拥有读写权限；为空则使用默认路径；
 	 */
-	private String logpath = "/data/applogs/xxl-job/jobhandler";
+	private String logPath = "/data/applogs/xxl-job/jobhandler";
 	/**
 	 * 	执行器日志保存天数 [选填] ：值大于3时生效，启用执行器Log文件定期清理功能，否则不生效；
 	 */
-	private int logretentiondays = 30;
+	private int logRetentionDays = 30;
 	/**
 	 * 执行器，任务Handler名称
 	 */

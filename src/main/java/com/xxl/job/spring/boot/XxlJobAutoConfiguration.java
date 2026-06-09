@@ -41,10 +41,13 @@ public class XxlJobAutoConfiguration {
 		try {
 			TrustManager[] trustAllCerts = new TrustManager[]{
 				new X509TrustManager() {
+					@Override
 					public X509Certificate[] getAcceptedIssuers() {
 						return new X509Certificate[0];
 					}
+					@Override
 					public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+					@Override
 					public void checkServerTrusted(X509Certificate[] certs, String authType) {}
 				}
 			};
@@ -99,28 +102,34 @@ public class XxlJobAutoConfiguration {
 					.collect(Collectors.toList());
 			extraTags.add(Tag.of("executor", executorProperties.getAppname()));
 			XxlJobAutoBindingAndMetricsSpringExecutor xxlJobExecutor = new XxlJobAutoBindingAndMetricsSpringExecutor(registryProvider.getObject(), xxlJobTemplateProvider.getObject(), extraTags);
-			xxlJobExecutor.setAdminAddresses(adminProperties.getAddresses());
-			xxlJobExecutor.setAppname(executorProperties.getAppname());
 			xxlJobExecutor.setAppTitle(executorProperties.getTitle());
-			xxlJobExecutor.setIp(executorProperties.getIp());
-			xxlJobExecutor.setPort(Integer.parseInt(executorProperties.getPort()));
-			xxlJobExecutor.setAccessToken(properties.getAccessToken());
-			xxlJobExecutor.setLogPath(executorProperties.getLogpath());
-			xxlJobExecutor.setLogRetentionDays(executorProperties.getLogretentiondays());
+			configureExecutor(xxlJobExecutor, adminProperties, executorProperties, properties);
 			return xxlJobExecutor;
 		} else {
 			log.info(">>>>>>>>>>> xxl-job auto binding executor init.");
 			XxlJobAutoBindingSpringExecutor xxlJobExecutor = new XxlJobAutoBindingSpringExecutor(xxlJobTemplateProvider.getObject());
-			xxlJobExecutor.setAdminAddresses(adminProperties.getAddresses());
-			xxlJobExecutor.setAppname(executorProperties.getAppname());
 			xxlJobExecutor.setAppTitle(executorProperties.getTitle());
-			xxlJobExecutor.setIp(executorProperties.getIp());
-			xxlJobExecutor.setPort(Integer.parseInt(executorProperties.getPort()));
-			xxlJobExecutor.setAccessToken(properties.getAccessToken());
-			xxlJobExecutor.setLogPath(executorProperties.getLogpath());
-			xxlJobExecutor.setLogRetentionDays(executorProperties.getLogretentiondays());
+			configureExecutor(xxlJobExecutor, adminProperties, executorProperties, properties);
 			return xxlJobExecutor;
 		}
 	}
+
+	/**
+	 * Configure common executor properties to avoid duplicated code.
+	 */
+	private void configureExecutor(XxlJobSpringExecutor executor,
+						XxlJobAdminProperties adminProperties,
+						XxlJobExecutorProperties executorProperties,
+						XxlJobProperties properties) {
+		executor.setAdminAddresses(adminProperties.getAddresses());
+		executor.setAppname(executorProperties.getAppname());
+		executor.setIp(executorProperties.getIp());
+		executor.setPort(Integer.parseInt(executorProperties.getPort()));
+		executor.setAccessToken(properties.getAccessToken());
+		executor.setLogPath(executorProperties.getLogPath());
+		executor.setLogRetentionDays(executorProperties.getLogRetentionDays());
+	}
+
+
 
 }
