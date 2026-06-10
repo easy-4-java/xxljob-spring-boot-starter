@@ -40,6 +40,8 @@ public class XxlJobExecutorProperties {
 
 	private String title = "";
 
+	private String address = null;
+
 	/**
 	 * 	执行器IP [选填]：默认为空表示自动获取IP，多网卡时可手动设置指定IP，该IP不会绑定Host仅作为通讯实用；地址信息用于 "执行器注册" 和 "调度中心请求并触发任务"；
 	 */

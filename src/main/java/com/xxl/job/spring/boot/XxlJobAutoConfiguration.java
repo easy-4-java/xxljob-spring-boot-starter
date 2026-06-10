@@ -123,13 +123,24 @@ public class XxlJobAutoConfiguration {
 						XxlJobProperties properties) {
 		executor.setAdminAddresses(adminProperties.getAddresses());
 		executor.setAppname(executorProperties.getAppname());
+		executor.setAddress(executorProperties.getAddress());
 		executor.setIp(executorProperties.getIp());
-		executor.setPort(Integer.parseInt(executorProperties.getPort()));
+		executor.setPort(resolvePort(executorProperties.getPort()));
 		executor.setAccessToken(properties.getAccessToken());
 		executor.setLogPath(executorProperties.getLogPath());
 		executor.setLogRetentionDays(executorProperties.getLogRetentionDays());
 	}
 
-
+	/**
+	 * 解析执行器端口号。Nacos 等外部配置源可能将空值绑定为空串 {@code ""}，
+	 * 直接 {@link Integer#parseInt(String)} 会抛 {@link NumberFormatException}；
+	 * 此处对 null/空/非法格式统一兜底为 {@code -1}（自动探测）。
+	 */
+	private int resolvePort(String port) {
+		if ( port == null || port.trim().isEmpty()) {
+			return -1;
+		}
+		return Integer.parseInt(port.trim());
+	}
 
 }
