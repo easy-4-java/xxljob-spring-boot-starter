@@ -26,7 +26,6 @@ import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;
 import com.xxl.job.spring.boot.model.XxlJobInfoList;
 import lombok.Getter;
-import lombok.NonNull;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -126,15 +125,9 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor implem
             // ============================================================
             Map<Method, XxlJob> xxlJobMethods = null;
             try {
-                xxlJobMethods = MethodIntrospector.selectMethods(bean.getClass(),
-                        new MethodIntrospector.MetadataLookup<XxlJob>() {
-                            @Override
-                            public XxlJob inspect(@NonNull Method method) {
-                                return AnnotatedElementUtils.findMergedAnnotation(method, XxlJob.class);
-                            }
-                        });
+                xxlJobMethods = MethodIntrospector.selectMethods(bean.getClass(),  (MethodIntrospector.MetadataLookup<XxlJob>) method -> AnnotatedElementUtils.findMergedAnnotation(method, XxlJob.class));
             } catch (Throwable ex) {
-                log.error("xxl-job method-jobhandler resolve error for bean[" + beanDefinitionName + "].", ex);
+                log.error("xxl-job method-job handler resolve error for bean[{}].", beanDefinitionName, ex);
             }
 
             // ============================================================
@@ -144,7 +137,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor implem
             try {
                 xxlJobCronMethods = MethodIntrospector.selectMethods(bean.getClass(), (MethodIntrospector.MetadataLookup<XxlJobCron>) method -> AnnotationUtils.findAnnotation(method, XxlJobCron.class));
             } catch (Throwable ex) {
-                log.error("xxl-job XxlJobCron resolve error for bean[" + beanDefinitionName + "].", ex);
+                log.error("xxl-job XxlJobCron resolve error for bean[{}].", beanDefinitionName, ex);
             }
 
             // 合并两种模式的结果

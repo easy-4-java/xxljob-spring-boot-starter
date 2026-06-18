@@ -17,14 +17,19 @@ package com.xxl.job.spring.boot.annotation;
 
 import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
 import com.xxl.job.core.glue.GlueTypeEnum;
+import com.xxl.job.core.handler.annotation.XxlJob;
 import com.xxl.job.spring.boot.executor.ExecutorRouteStrategyEnum;
 import com.xxl.job.spring.boot.executor.MisfireStrategyEnum;
 import com.xxl.job.spring.boot.executor.ScheduleTypeEnum;
+import org.springframework.core.annotation.AliasFor;
 
 import java.lang.annotation.*;
 
 /**
  * 增强版 XxlJob 注解，可 100% 替代 @XxlJob
+ * <p>
+ * 通过 {@code @AliasFor(annotation = XxlJob.class)} 实现与 @XxlJob 的元注解桥接，
+ * Spring 的 {@code AnnotatedElementUtils.findMergedAnnotation()} 会自动识别。
  * <p>
  * 使用示例（不再需要 @XxlJob）：
  * <pre>
@@ -46,18 +51,23 @@ public @interface XxlJobCron {
 
 	/**
 	 * JobHandler名称，用于在执行器中注册 JobHandler
-	 * <p>当与 @XxlJob 同时使用时，以 @XxlJobCron.value() 为准</p>
+	 * <p>通过 @AliasFor 桥接到 @XxlJob.value()，Spring 会自动解析</p>
 	 */
+	@AliasFor(annotation = XxlJob.class, attribute = "value")
 	String value() default "";
 
 	/**
-	 * 初始化方法名，JobThread 初始化时调用（等同于 @XxlJob 的 init）
+	 * 初始化方法名，JobThread 初始化时调用
+	 * <p>通过 @AliasFor 桥接到 @XxlJob.init()</p>
 	 */
+	@AliasFor(annotation = XxlJob.class, attribute = "init")
 	String init() default "";
 
 	/**
-	 * 销毁方法名，JobThread 销毁时调用（等同于 @XxlJob 的 destroy）
+	 * 销毁方法名，JobThread 销毁时调用
+	 * <p>通过 @AliasFor 桥接到 @XxlJob.destroy()</p>
 	 */
+	@AliasFor(annotation = XxlJob.class, attribute = "destroy")
 	String destroy() default "";
 
 	/**

@@ -10,6 +10,7 @@ import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.util.StopWatch;
+import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -56,19 +57,34 @@ public class MetricMethodJobHandler extends IJobHandler {
 
         // 1、创建并启动 StopWatch
         XxlJob job = AnnotationUtils.findAnnotation(method, XxlJob.class);
-        StopWatch stopWatch = new StopWatch(job.value());
         XxlJobCron jobCron = AnnotationUtils.findAnnotation(method, XxlJobCron.class);
-        stopWatch.start(Objects.nonNull(jobCron) ? jobCron.desc() : job.value());
+
+        // 优先从 @XxlJob 获取名称，否则从 @XxlJobCron 获取
+        String jobName;
+        String jobDesc;
+        if (job != null && StringUtils.hasText(job.value())) {
+            jobName = job.value();
+            jobDesc = job.value();
+        } else if (jobCron != null && StringUtils.hasText(jobCron.value())) {
+            jobName = jobCron.value();
+            jobDesc = jobCron.desc();
+        } else {
+            jobName = method.getName();
+            jobDesc = method.getName();
+        }
+
+        StopWatch stopWatch = new StopWatch(jobName);
+        stopWatch.start(jobDesc);
 
         // 一次请求计数 +1
         submitted.increment();
         // 当前正在运行的请求数 +1
         running.increment();
 
-        // 3、获取 XxlJobCron 注解
-        String metric = MetricNames.name(XxlJobMetrics.XXL_JOB_METRIC_NAME_PREFIX, job.value());
+        // 3、构建指标
+        String metric = MetricNames.name(XxlJobMetrics.XXL_JOB_METRIC_NAME_PREFIX, jobName);
         List<Tag> jobTags = new ArrayList<>(tags);
-        jobTags.add(Tag.of("job", job.value()));
+        jobTags.add(Tag.of("job", jobName));
         Timer timer = registry.timer(metric, jobTags);
 
         try {

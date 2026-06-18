@@ -11,10 +11,14 @@ xxl:
       username: admin
       password: 123456
       version: V3_X
+      cookie:
+        maximum-size: 10000
+        expire-after-access: 24h
+        expire-after-write: 24h
     executor:
       enabled: true
       title: 自测验证执行器
-      appname: xxl-job-test-verify
+      app-name: xxl-job-test-verify
       port: -1
-      logpath: /tmp/xxl-job-test-verify/logs
-      logretentiondays: 1
+      log-path: /tmp/xxl-job-test-verify/logs
+      log-retention-days: 30

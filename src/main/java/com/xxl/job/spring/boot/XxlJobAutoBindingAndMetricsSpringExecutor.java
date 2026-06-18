@@ -15,8 +15,8 @@ import java.util.Objects;
 
 public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBindingSpringExecutor {
 
-    private MeterRegistry registry;
-    private Collection<Tag> tags;
+    private final MeterRegistry registry;
+    private final Collection<Tag> tags;
 
     public XxlJobAutoBindingAndMetricsSpringExecutor(MeterRegistry registry, XxlJobTemplate xxlJobTemplate, Collection<Tag> tags) {
         super(xxlJobTemplate);
