@@ -9,7 +9,7 @@ public class XxlJobConstants {
     }
 
     public static final String XXL_RPC_COOKIE = "XXL_JOB_LOGIN_IDENTITY";
-    public static final String XXL_RPC_ACCESS_TOKEN = "XXL-RPC-ACCESS-TOKEN";
+    public static final String XXL_RPC_ACCESS_TOKEN = "XXL-JOB-ACCESS-TOKEN";
 
     public static final String DEFAULT_HTTP_JOB_HANDLER = "evaluationHttpJobHandler";
     public static final String DEFAULT_GLUE_TYPE = "BEAN";
