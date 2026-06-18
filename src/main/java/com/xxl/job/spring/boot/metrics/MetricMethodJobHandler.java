@@ -8,7 +8,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.core.annotation.AnnotatedElementUtils;
 import org.springframework.util.StopWatch;
 import org.springframework.util.StringUtils;
 
@@ -56,9 +56,9 @@ public class MetricMethodJobHandler extends IJobHandler {
     public void execute() throws Exception {
 
         // 1、创建并启动 StopWatch
-        XxlJob job = AnnotationUtils.findAnnotation(method, XxlJob.class);
-        XxlJobCron jobCron = AnnotationUtils.findAnnotation(method, XxlJobCron.class);
-
+        XxlJob job = AnnotatedElementUtils.findMergedAnnotation(method, XxlJob.class);
+        XxlJobCron jobCron = AnnotatedElementUtils.findMergedAnnotation(method, XxlJobCron.class);
+        
         // 优先从 @XxlJob 获取名称，否则从 @XxlJobCron 获取
         String jobName;
         String jobDesc;
