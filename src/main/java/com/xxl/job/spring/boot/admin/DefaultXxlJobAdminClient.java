@@ -10,6 +10,8 @@ import kong.unirest.HttpRequestWithBody;
 import kong.unirest.UnirestInstance;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -55,7 +57,7 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
             String url = buildUrl(XxlJobConstants.loginPath(version()));
             log.info("xxl-job login POST {} (v={})", url, version());
             HttpResponse<String> response = executePost(url,
-                    Map.of("userName", userName, "password", password, "ifRemember", remember ? "on" : "off"),
+                    loginFormParams(userName, password, remember),
                     false);
             log.info("xxl-job login response: status={}, body={}", response.getStatus(), safeBody(response));
             if (response.isSuccess()) {
@@ -96,7 +98,7 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
     public ReturnT<String> logout() {
         try {
             String url = buildUrl(XxlJobConstants.logoutPath(version()));
-            HttpResponse<String> response = executePost(url, Map.of(), false);
+            HttpResponse<String> response = executePost(url, Collections.<String, Object>emptyMap(), false);
             authenticated = false;
             cookieStore.clear();
             if (response.isSuccess()) {
@@ -178,6 +180,17 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
         } catch (Exception e) {
             return "err";
         }
+    }
+
+    /**
+     * 登录表单参数（避免 Map.of，兼容 Java 8 / 2.3.x 分支）。
+     */
+    private static Map<String, Object> loginFormParams(String userName, String password, boolean remember) {
+        Map<String, Object> params = new HashMap<>(4);
+        params.put("userName", userName);
+        params.put("password", password);
+        params.put("ifRemember", remember ? "on" : "off");
+        return params;
     }
 
 }
