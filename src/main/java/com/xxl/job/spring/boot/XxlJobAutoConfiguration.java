@@ -3,6 +3,8 @@ package com.xxl.job.spring.boot;
 
 import com.xxl.job.core.executor.XxlJobExecutor;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
+import com.xxl.job.spring.boot.admin.DefaultXxlJobAdminClient;
+import com.xxl.job.spring.boot.admin.XxlJobAdminClient;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import kong.unirest.Unirest;
@@ -70,19 +72,32 @@ public class XxlJobAutoConfiguration {
 		}
 		instance.config()
 				.connectTimeout(10000)
-				.enableCookieManagement(true)
+				// Cookie 由 XxlJobAdminCookieStore 手工管理，规避无效 Expires 解析失败
+				.enableCookieManagement(false)
 				.followRedirects(true);
 		return instance;
 	}
 
 	@Bean
+	@ConditionalOnMissingBean
+	public XxlJobAdminClient xxlJobAdminClient(
+			ObjectProvider<UnirestInstance> unirestProvider,
+			XxlJobProperties properties,
+			XxlJobAdminProperties adminProperties) {
+		UnirestInstance instance = unirestProvider.getIfAvailable(this::unirestInstance);
+		return new DefaultXxlJobAdminClient(instance, properties, adminProperties);
+	}
+
+	@Bean
 	public XxlJobTemplate xxlJobTemplate(
 			ObjectProvider<UnirestInstance> unirestProvider,
+			ObjectProvider<XxlJobAdminClient> adminClientProvider,
 			XxlJobProperties properties,
 			XxlJobAdminProperties adminProperties,
 			XxlJobExecutorProperties executorProperties) {
-		UnirestInstance instance = unirestProvider.getIfAvailable(this::unirestInstance);
-		return new XxlJobTemplate(instance, properties, adminProperties, executorProperties);
+		XxlJobAdminClient adminClient = adminClientProvider.getIfAvailable(() ->
+				new DefaultXxlJobAdminClient(unirestProvider.getIfAvailable(this::unirestInstance), properties, adminProperties));
+		return new XxlJobTemplate(adminClient, properties, adminProperties, executorProperties);
 	}
 
 	@Bean
