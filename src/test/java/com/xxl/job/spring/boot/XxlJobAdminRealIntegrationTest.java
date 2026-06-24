@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("xxl-job-admin 真实集成测试")
+@EnabledIfEnvironmentVariable(named = "XXL_JOB_ADMIN_URL", matches = ".+")
 class XxlJobAdminRealIntegrationTest {
 
     private static XxlJobTemplate template;
@@ -31,7 +32,10 @@ class XxlJobAdminRealIntegrationTest {
 
     @BeforeAll
     static void setUp() {
-        String adminUrl = System.getProperty("xxl.admin.url", "http://192.168.3.116:31505/xxl-job-admin");
+        String adminUrl = System.getenv("XXL_JOB_ADMIN_URL");
+        if (adminUrl == null || adminUrl.isBlank()) {
+            adminUrl = System.getProperty("xxl.admin.url", "http://192.168.3.116:31505/xxl-job-admin");
+        }
         String username = System.getProperty("xxl.admin.username", "admin");
         String password = System.getProperty("xxl.admin.password", "123456");
 
