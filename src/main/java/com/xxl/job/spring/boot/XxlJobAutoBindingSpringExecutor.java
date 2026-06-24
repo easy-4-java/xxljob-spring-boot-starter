@@ -168,7 +168,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor implem
                 }
 
                 // regist job handler (通过父类方法注册到执行器)
-                registJobHandler(xxlJob, bean, executeMethod);
+                registryJobHandler(xxlJob, bean, executeMethod);
                 // regist cron task info (for auto-binding to admin)
                 registJobHandlerCronTaskInfo(handlerName, xxlJobCron, bean, executeMethod);
             }
@@ -412,7 +412,7 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor implem
      * 当 xxlJob 为 null 时，从 @XxlJobCron 获取 handler 名称和生命周期方法
      */
     @Override
-    protected void registJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
+    protected void registryJobHandler(XxlJob xxlJob, Object bean, Method executeMethod) {
         // 获取 JobHandler 名称、init/destroy 方法
         String name = null;
         String initMethodName = null;
