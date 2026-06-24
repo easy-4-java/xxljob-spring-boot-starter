@@ -1,6 +1,6 @@
 package com.xxl.job.spring.boot.admin;
 
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.job.spring.boot.model.ReturnT;
 import com.xxl.job.spring.boot.AdminVersion;
 import com.xxl.job.spring.boot.XxlJobAdminProperties;
 import com.xxl.job.spring.boot.XxlJobConstants;
@@ -114,9 +114,10 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
     public XxlJobAdminHttpResponse postForm(String pathSuffix, Map<String, Object> paramMap) {
         loginIfNeeded();
         XxlJobAdminHttpResponse response = toAdminResponse(executePost(buildUrl(pathSuffix), paramMap, true));
-        // session 过期：返回 HTML 而非 JSON，重新登录后重试一次
-        if (response.isSuccess() && !response.isJson()) {
-            log.warn("xxl-job session expired, re-login. body:{}", response.safeBody(200));
+        // session 过期：302 或未返回 JSON（HTML 登录页），重新登录后重试一次
+        if (response.getStatus() == 302 || (response.isSuccess() && !response.isJson())) {
+            log.warn("xxl-job session expired, re-login. status={}, body:{}",
+                    response.getStatus(), response.safeBody(200));
             authenticated = false;
             cookieStore.clear();
             loginIfNeeded();

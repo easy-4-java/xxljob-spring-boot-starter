@@ -60,9 +60,12 @@ public class XxlJobAdminCookieStore {
     }
 
     /**
-     * 构建仅含指定名称的请求 Cookie 头；未命中时回退为全部 Cookie。
+     * 构建请求 Cookie 头：若指定 preferredName 且存在，仅发送该 Cookie（避免 V2/V3 混发导致 Admin 鉴权异常）。
      */
     public String buildCookieHeader(String preferredName) {
+        if (cookies.isEmpty()) {
+            return null;
+        }
         if (preferredName != null && cookies.containsKey(preferredName)) {
             return preferredName + "=" + cookies.get(preferredName);
         }

@@ -3,7 +3,7 @@ package com.xxl.job.spring.boot.admin;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.job.spring.boot.model.ReturnT;
 import com.xxl.job.spring.boot.AdminVersion;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
@@ -88,7 +88,7 @@ public final class XxlJobAdminPageListAdapter {
         List<I> items = dataArray != null ? dataArray.toList(itemClass) : null;
 
         try {
-            L result = listClass.newInstance();
+            L result = listClass.getDeclaredConstructor().newInstance();
             if (result instanceof XxlJobGroupList) {
                 XxlJobGroupList gl = (XxlJobGroupList) result;
                 gl.setRecordsTotal(total);

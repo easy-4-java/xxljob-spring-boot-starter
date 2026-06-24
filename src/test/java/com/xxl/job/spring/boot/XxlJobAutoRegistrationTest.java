@@ -138,6 +138,6 @@ class XxlJobAutoRegistrationTest {
     private List<XxlJobRequestLog> findAllRequests(String path) {
         return mockAdmin.getRequestLog().stream()
                 .filter(r -> r.path.equals(path))
-                .toList();
+                .collect(Collectors.toList());
     }
 }

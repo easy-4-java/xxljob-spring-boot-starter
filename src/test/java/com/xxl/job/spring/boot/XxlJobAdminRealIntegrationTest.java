@@ -1,6 +1,6 @@
 package com.xxl.job.spring.boot;
 
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.job.spring.boot.model.ReturnT;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;

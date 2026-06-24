@@ -1,7 +1,9 @@
 package com.xxl.job.spring.boot;
 
+import com.xxl.job.core.executor.XxlJobExecutor;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import com.xxl.job.spring.boot.annotation.XxlJobCron;
+import com.xxl.job.spring.boot.util.XxlJobHandlerRegistrar;
 import com.xxl.job.spring.boot.metrics.MetricMethodJobHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
@@ -82,8 +84,8 @@ public class XxlJobAutoBindingAndMetricsSpringExecutor extends XxlJobAutoBinding
             }
         }
 
-        // registry jobhandler
-        registJobHandler(name, new MetricMethodJobHandler(registry, bean, executeMethod, initMethod, destroyMethod, tags));
+        // registry jobhandler（跨 core 版本兼容静态/实例 API）
+        XxlJobHandlerRegistrar.registerJobHandler(this, name, new MetricMethodJobHandler(registry, bean, executeMethod, initMethod, destroyMethod, tags));
     }
 
 }

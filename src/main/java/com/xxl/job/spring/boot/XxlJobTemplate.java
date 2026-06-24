@@ -17,7 +17,7 @@ package com.xxl.job.spring.boot;
 
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.job.spring.boot.model.ReturnT;
 import com.xxl.job.spring.boot.admin.XxlJobAdminClient;
 import com.xxl.job.spring.boot.admin.XxlJobAdminHttpResponse;
 import com.xxl.job.spring.boot.admin.XxlJobAdminPageListAdapter;

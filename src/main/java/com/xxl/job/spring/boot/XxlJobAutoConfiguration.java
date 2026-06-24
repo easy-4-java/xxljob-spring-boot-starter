@@ -74,7 +74,8 @@ public class XxlJobAutoConfiguration {
 				.connectTimeout(10000)
 				// Cookie 由 XxlJobAdminCookieStore 手工管理，规避无效 Expires 解析失败
 				.enableCookieManagement(false)
-				.followRedirects(true);
+				// 不跟随 302，便于 postForm 识别未登录并重试登录
+				.followRedirects(false);
 		return instance;
 	}
 

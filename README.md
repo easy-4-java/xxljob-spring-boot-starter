@@ -12,7 +12,42 @@
 - **`@XxlJobCron` 注解**：可 100% 替代 `@XxlJob`，支持独立使用，自动注册定时任务到 Admin
 - **双注解兼容**：支持 `@XxlJob` + `@XxlJobCron` 组合使用，向后兼容
 - **Micrometer 指标采集**：内置任务执行耗时、提交/完成/运行计数等指标
-- **多版本 Admin 兼容**：支持 xxl-job-admin 2.x / 3.x
+- **多版本 Admin 兼容**：支持 xxl-job-admin 2.x / 3.x（V2_X / V3_2_X / V3_X）
+
+## 多分支版本模型（对齐 opencli）
+
+Git **分支名 = 产品线前缀**。每条分支通过 `scripts/render-branch-pom.py` 固定 Spring Boot parent、JDK、`xxl-job-core` 与 Maven 坐标：
+
+```bash
+git checkout 3.0.x
+python3 scripts/render-branch-pom.py 3.0.x
+mvn clean test -DskipTests=false
+mvn clean install
+```
+
+Maven 坐标：`{分支前缀}.{日期}-SNAPSHOT`，例如 `3.0.x.20260624-SNAPSHOT`。  
+正式版：`RELEASE=1 RELEASE_DATE=20260624 python3 scripts/render-branch-pom.py 3.0.x` → `3.0.x.20260624`。
+
+### Starter 分支矩阵
+
+| Git 分支 | Maven 坐标示例 | Spring Boot | JDK | xxl-job-core | 执行器 API |
+|----------|----------------|-------------|-----|--------------|------------|
+| `2.7.x` | `2.7.x.20260624-SNAPSHOT` | 2.7.18 | 11 | 2.5.0 | `registJobHandler` |
+| **`3.0.x`** | **`3.0.x.{date}-SNAPSHOT`** | **3.0.13** | 17 | **3.0.0** | `registJobHandler` |
+| `3.1.x` | `3.1.x.{date}-SNAPSHOT` | 3.1.12 | 17 | 3.1.1 | `registJobHandler` |
+| `3.2.x` | `3.2.x.{date}-SNAPSHOT` | 3.2.12 | 17 | 3.2.0 | `registJobHandler` |
+| `3.3.x` | `3.3.x.{date}-SNAPSHOT` | 3.3.6 | 17 | 3.3.2 | `registryJobHandler` |
+| `3.4.x` | `3.4.x.{date}-SNAPSHOT` | 3.4.2 | 17 | 3.4.2 | `registryJobHandler` |
+
+> **两层版本语义**：Starter 分支决定接入方 Spring Boot 线；`xxl-job-core` 决定执行器 RPC；`AdminVersion`（Nacos）决定 Admin HTTP Web API 路径，三者独立配置。
+
+### Admin 协议版本（`xxl.job.admin.version`）
+
+| AdminVersion | 适用 xxl-job-admin | HTTP 特征 | 推荐 starter 分支 |
+|--------------|-------------------|-----------|-------------------|
+| `V2_X`（默认） | 2.x、3.0.0、3.1.x | `/login`、`save`/`add`/`remove`、Cookie `XXL_JOB_LOGIN_IDENTITY` | `3.0.x`（core 3.0.0） |
+| `V3_2_X` | 3.2.0 | `/auth/doLogin`，CRUD 仍 V2 路径 | `3.2.x` |
+| `V3_X` | 3.3.0+ | `insert`/`delete`、`ids[]`、`offset`/`pagesize` | `3.3.x`+（core 3.3+） |
 
 ## 注解扫描机制
 
@@ -33,32 +68,29 @@
 │ 4. 优先用 @XxlJobCron.value() 作为 handlerName                      │
 │ 5. 注册到执行器 + 自动绑定到 Admin                                     │
 └──────────────────────────────────────────────────────────────────────┘
-
-执行阶段（MetricMethodJobHandler.execute）
-┌──────────────────────────────────────────────────────────────────────┐
-│ 1. 查找 @XxlJob      → 有则用 value()                               │
-│ 2. 查找 @XxlJobCron  → 有则用 value() / desc()                      │
-│ 3. 都没有            → 兜底用 method.getName()                       │
-└──────────────────────────────────────────────────────────────────────┘
 ```
-
-### 使用场景对照
-
-| 场景 | 注解 | 扫描 | 执行 | 说明 |
-|------|------|------|------|------|
-| 仅 `@XxlJob("a")` | ✅ | ✅ 用 `a` | ✅ 用 `a` | 官方原生用法 |
-| 仅 `@XxlJobCron("b")` | ✅ | ✅ 用 `b` | ✅ 用 `b` | 本组件推荐用法 |
-| 两者同时存在 | ✅ | ✅ 合并 | ✅ 优先 `@XxlJobCron` | 向后兼容 |
 
 ## 使用说明
 
 ### 1、添加 Maven 依赖
 
+**3.0.x 线（Spring Boot 3.0.13 / JDK 17 / core 3.0.0，对接 admin 3.0.0）**
+
 ```xml
 <dependency>
-    <groupId>com.github.hiwepy</groupId>
+    <groupId>io.github.hiwepy</groupId>
     <artifactId>xxljob-spring-boot-starter</artifactId>
-    <version>${project.version}</version>
+    <version>3.0.x.20260624-SNAPSHOT</version>
+</dependency>
+```
+
+**2.7.x 遗留线（Spring Boot 2.7 / JDK 11 / core 2.5.0）**
+
+```xml
+<dependency>
+    <groupId>io.github.hiwepy</groupId>
+    <artifactId>xxljob-spring-boot-starter</artifactId>
+    <version>2.7.x.20260624-SNAPSHOT</version>
 </dependency>
 ```
 
@@ -74,6 +106,8 @@ xxl:
       addresses: http://localhost:8091/xxl-job-admin
       username: admin
       password: 123456
+      # admin 3.0.0 用 V2_X；admin 3.3+ 须换 starter 3.3.x 分支并设 V3_X
+      version: V2_X
       cookie:
         maximum-size: 1000
         expire-after-write: 5s
@@ -87,37 +121,6 @@ xxl:
       log-retention-days: 30
 ```
 
-#### K8s 部署
-
-```yaml
-xxl:
-  job:
-    executor:
-      ip: [使用k8s主节点IP]
-      app-name: default-job-executor
-      title: 任务执行器
-      port: 31734
-```
-
-> 指定 xxl-job 执行器端口，并配置宿主服务的 Service 对外暴露端口与 xxl-job 执行器端口相同！
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: my-xxx-job-svc
-spec:
-  ports:
-    - name: tcp-31734
-      protocol: TCP
-      port: 31734
-      targetPort: 31734
-      nodePort: 31734
-  selector:
-    app: my-xxx-job
-  type: NodePort
-```
-
 ### 3、使用示例
 
 #### 方式一：仅使用 `@XxlJobCron`（推荐）
@@ -127,62 +130,9 @@ spec:
 @Slf4j
 public class SampleXxlJob {
 
-    /**
-     * 简单任务 —— 只需 @XxlJobCron，无需 @XxlJob
-     */
     @XxlJobCron(value = "demoJobHandler", cron = "0/10 * * * * ?", desc = "简单任务示例", author = "admin")
     public void demoJobHandler() throws Exception {
         XxlJobHelper.log("XXL-JOB, Hello World.");
-        for (int i = 0; i < 5; i++) {
-            XxlJobHelper.log("beat at:" + i);
-            TimeUnit.SECONDS.sleep(2);
-        }
-    }
-
-    /**
-     * 带生命周期的任务
-     */
-    @XxlJobCron(value = "lifecycleJob", cron = "0/30 * * * * ?", desc = "生命周期任务", author = "admin",
-                init = "initMethod", destroy = "destroyMethod")
-    public void lifecycleJob() throws Exception {
-        XxlJobHelper.log("lifecycle job running");
-    }
-
-    public void initMethod() {
-        log.info("job init");
-    }
-
-    public void destroyMethod() {
-        log.info("job destroy");
-    }
-}
-```
-
-#### 方式二：`@XxlJob` + `@XxlJobCron` 组合（向后兼容）
-
-```java
-@Component
-public class LegacyXxlJob {
-
-    @XxlJob("shardingJobHandler")
-    @XxlJobCron(cron = "0/10 * * * * ?", desc = "分片广播任务", author = "admin")
-    public void shardingJobHandler() throws Exception {
-        int shardIndex = XxlJobHelper.getShardIndex();
-        int shardTotal = XxlJobHelper.getShardTotal();
-        XxlJobHelper.log("分片参数：当前分片序号 = {}, 总分片数 = {}", shardIndex, shardTotal);
-    }
-}
-```
-
-#### 方式三：仅使用 `@XxlJob`（官方原生）
-
-```java
-@Component
-public class NativeXxlJob {
-
-    @XxlJob("nativeJobHandler")
-    public void nativeJobHandler() throws Exception {
-        XxlJobHelper.log("native job");
     }
 }
 ```
@@ -191,35 +141,11 @@ public class NativeXxlJob {
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `value` | String | `""` | JobHandler 名称（等同于 `@XxlJob.value()`） |
+| `value` | String | `""` | JobHandler 名称 |
 | `cron` | String | `""` | CRON 表达式 |
-| `desc` | String | `""` | 任务描述 |
-| `author` | String | `"xxl-job"` | 负责人 |
-| `alarmEmail` | String | `""` | 报警邮件 |
-| `scheduleType` | ScheduleTypeEnum | `CRON` | 调度类型 |
-| `glueType` | GlueTypeEnum | `BEAN` | GLUE 类型 |
-| `routeStrategy` | ExecutorRouteStrategyEnum | `LEAST_FREQUENTLY_USED` | 路由策略 |
-| `blockStrategy` | ExecutorBlockStrategyEnum | `COVER_EARLY` | 阻塞处理策略 |
-| `misfireStrategy` | MisfireStrategyEnum | `DO_NOTHING` | 调度过期策略 |
-| `timeout` | int | `3000` | 超时时间（毫秒） |
-| `failRetryCount` | int | `3` | 失败重试次数 |
-| `param` | String | `""` | 任务参数 |
-| `init` | String | `""` | 初始化方法名 |
-| `destroy` | String | `""` | 销毁方法名 |
-| `selfStarting` | boolean | `false` | 是否自启动 |
+| `blockStrategy` | ExecutorBlockStrategyEnum | `COVER_EARLY` | 阻塞处理策略（来自 xxl-job-core） |
 
 ### 5、Micrometer 指标采集
-
-引入依赖：
-
-```xml
-<dependency>
-    <groupId>io.micrometer</groupId>
-    <artifactId>micrometer-registry-prometheus</artifactId>
-</dependency>
-```
-
-启用配置：
 
 ```yaml
 xxl:
@@ -228,30 +154,23 @@ xxl:
       enabled: true
 ```
 
-采集指标：
+### 6、自动配置发现
 
-| 指标名 | 类型 | 说明 |
-|--------|------|------|
-| `xxl_job_submitted_total` | Counter | 任务提交总数 |
-| `xxl_job_running_total` | Gauge | 当前运行中任务数 |
-| `xxl_job_completed_total` | Counter | 任务完成总数 |
-| `xxl_job_duration_seconds` | Timer | 任务执行耗时 |
-| `xxl_job_queue_size_total` | Gauge | 回调队列大小 |
+同时提供 `META-INF/spring.factories` 与 `AutoConfiguration.imports`，兼容 Spring Boot 2.7 与 3.x。
 
-### 6、兼容性说明
+### 7、Maven Central 发布
 
-| xxl-job-core 版本 | xxl-job-admin 版本 | 本组件兼容 |
-|-------------------|-------------------|-----------|
-| 2.5.0 | 2.5.0 | ✅ |
-| 2.5.0 | 3.3.0 | ✅ |
-| 2.5.0 | 3.4.1 | ❌ (Spring Boot 版本不兼容) |
+详见 [RELEASE-CENTRAL.md](RELEASE-CENTRAL.md)。
 
-> **注意**：xxl-job 3.x 要求 Spring Boot 3.4+ / JDK 17+，本组件基于 Spring Boot 2.7.x 构建，最高兼容 xxl-job-admin 3.3.0。
+```bash
+# SNAPSHOT（render 后）
+mvn clean deploy -DskipTests
+
+# 正式版
+RELEASE=1 RELEASE_DATE=20260624 python3 scripts/render-branch-pom.py 3.0.x
+mvn clean deploy -P release -DskipTests
+```
 
 ## Jeebiz 技术社区
 
 Jeebiz 技术社区 **微信公共号**、**小程序**，欢迎关注反馈意见和一起交流，关注公众号回复「Jeebiz」拉你入群。
-
-|公共号|小程序|
-|---|---|
-| ![](https://raw.githubusercontent.com/hiwepy/static/main/images/qrcode_for_gh_1d965ea2dfd1_344.jpg)| ![](https://raw.githubusercontent.com/hiwepy/static/main/images/gh_09d7d00da63e_344.jpg)|

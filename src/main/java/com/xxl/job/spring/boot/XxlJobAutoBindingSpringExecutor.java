@@ -15,12 +15,14 @@
  */
 package com.xxl.job.spring.boot;
 
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.job.core.executor.XxlJobExecutor;
+import com.xxl.job.spring.boot.model.ReturnT;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
 import com.xxl.job.core.glue.GlueFactory;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import com.xxl.job.core.handler.impl.MethodJobHandler;
 import com.xxl.job.spring.boot.annotation.XxlJobCron;
+import com.xxl.job.spring.boot.util.XxlJobHandlerRegistrar;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;
@@ -467,8 +469,8 @@ public class XxlJobAutoBindingSpringExecutor extends XxlJobSpringExecutor implem
             }
         }
 
-        // registry jobhandler
-        registJobHandler(name, new MethodJobHandler(bean, executeMethod, initMethod, destroyMethod));
+        // registry jobhandler（跨 core 版本兼容静态/实例 API）
+        XxlJobHandlerRegistrar.registerJobHandler(this, name, new MethodJobHandler(bean, executeMethod, initMethod, destroyMethod));
     }
 
     // ---------------------- applicationContext ----------------------

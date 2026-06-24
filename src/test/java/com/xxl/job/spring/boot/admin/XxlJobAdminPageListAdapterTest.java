@@ -1,6 +1,6 @@
 package com.xxl.job.spring.boot.admin;
 
-import com.xxl.job.core.biz.model.ReturnT;
+import com.xxl.job.spring.boot.model.ReturnT;
 import com.xxl.job.spring.boot.AdminVersion;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfoList;

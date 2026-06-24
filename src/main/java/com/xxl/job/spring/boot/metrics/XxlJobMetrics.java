@@ -16,7 +16,6 @@
 package com.xxl.job.spring.boot.metrics;
 
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
-import com.xxl.job.core.thread.TriggerCallbackThread;
 import io.micrometer.core.instrument.*;
 import io.micrometer.core.instrument.binder.MeterBinder;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +24,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.util.ReflectionUtils;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -33,7 +33,7 @@ import java.util.function.ToDoubleFunction;
 import java.util.function.ToLongFunction;
 
 /**
- * XXL Job Metrics
+ * XXL Job Metrics（回调队列等指标；兼容 core 3.0~3.3 的 TriggerCallbackThread，3.4+ 无公开队列时跳过）。
  */
 @Slf4j
 public class XxlJobMetrics implements MeterBinder, ApplicationListener<ApplicationStartedEvent> {
@@ -71,22 +71,42 @@ public class XxlJobMetrics implements MeterBinder, ApplicationListener<Applicati
 
 	@Override
 	public void bindTo(MeterRegistry registry) {
+		bindCallbackQueueSizeIfSupported(registry);
+	}
 
-		bindCounter(registry, METRIC_NAME_JOB_QUEUE_SIZE, "the size of job callBack Queue ", TriggerCallbackThread.getInstance(), (m) -> {
-			try {
-				Field field = ReflectionUtils.findField(TriggerCallbackThread.class, "callBackQueue");
-				ReflectionUtils.makeAccessible(field);
-				Object queue = field.get(m);
-				if (Objects.nonNull(queue) && queue instanceof LinkedBlockingQueue) {
-					return ((LinkedBlockingQueue<?>) queue).size();
+	/**
+	 * 绑定回调队列长度指标；core 3.4+ 重构回调线程后无公开 callBackQueue，则跳过。
+	 */
+	private void bindCallbackQueueSizeIfSupported(MeterRegistry registry) {
+		try {
+			Class<?> callbackThreadClass = Class.forName("com.xxl.job.core.thread.TriggerCallbackThread");
+			Method getInstance = callbackThreadClass.getMethod("getInstance");
+			Object callbackThread = getInstance.invoke(null);
+			if (callbackThread == null) {
+				return;
+			}
+			bindCounter(registry, METRIC_NAME_JOB_QUEUE_SIZE, "the size of job callBack Queue ", callbackThread, (m) -> {
+				try {
+					Field field = ReflectionUtils.findField(callbackThreadClass, "callBackQueue");
+					if (field == null) {
+						return 0;
+					}
+					ReflectionUtils.makeAccessible(field);
+					Object queue = field.get(m);
+					if (Objects.nonNull(queue) && queue instanceof LinkedBlockingQueue) {
+						return ((LinkedBlockingQueue<?>) queue).size();
+					}
+					return 0;
+				} catch (Exception e) {
+					log.error(e.getMessage());
 				}
 				return 0;
-			} catch (Exception e) {
-				log.error(e.getMessage());
-			}
-			return 0;
-		});
-		// bindCounter(registry, METRIC_NAME_DISPATCHER_MAX_REQUESTS, "max requests of dispatcher ", dispatcher, Dispatcher::getMaxRequests);
+			});
+		} catch (ClassNotFoundException e) {
+			log.debug("TriggerCallbackThread not found (xxl-job-core 3.4+), skip queue metric");
+		} catch (Exception e) {
+			log.warn("xxl-job callback queue metric unavailable: {}", e.getMessage());
+		}
 	}
 
 

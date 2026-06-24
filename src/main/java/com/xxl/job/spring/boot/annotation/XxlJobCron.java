@@ -15,8 +15,8 @@
  */
 package com.xxl.job.spring.boot.annotation;
 
-import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
 import com.xxl.job.core.glue.GlueTypeEnum;
+import com.xxl.job.core.enums.ExecutorBlockStrategyEnum;
 import com.xxl.job.spring.boot.executor.ExecutorRouteStrategyEnum;
 import com.xxl.job.spring.boot.executor.MisfireStrategyEnum;
 import com.xxl.job.spring.boot.executor.ScheduleTypeEnum;
