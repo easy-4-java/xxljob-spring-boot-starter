@@ -18,8 +18,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 针对真实 xxl-job-admin 的集成测试。
  * <p>
- * 需要设置环境变量 XXL_JOB_ADMIN_URL 或使用默认地址。
- * 验证登录、执行器 CRUD、任务 CRUD、start/stop（v3 参数格式）全流程。
+ * 需要设置环境变量 {@code XXL_JOB_ADMIN_URL}；admin 3.0.0 请使用 {@code V2_X}（默认）。
+ * 可通过 {@code XXL_JOB_ADMIN_VERSION} 或 {@code -Dxxl.admin.version} 覆盖。
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("xxl-job-admin 真实集成测试")
@@ -33,7 +33,7 @@ class XxlJobAdminRealIntegrationTest {
     @BeforeAll
     static void setUp() {
         String adminUrl = System.getenv("XXL_JOB_ADMIN_URL");
-        if (adminUrl == null || adminUrl.isBlank()) {
+        if (adminUrl == null || adminUrl.trim().isEmpty()) {
             adminUrl = System.getProperty("xxl.admin.url", "http://192.168.3.116:31505/xxl-job-admin");
         }
         String username = System.getProperty("xxl.admin.username", "admin");
@@ -49,7 +49,8 @@ class XxlJobAdminRealIntegrationTest {
         adminProps.setAddresses(adminUrl);
         adminProps.setUsername(username);
         adminProps.setPassword(password);
-        adminProps.setVersion(AdminVersion.V3_X);
+        String adminVersion = System.getProperty("xxl.admin.version", System.getenv().getOrDefault("XXL_JOB_ADMIN_VERSION", "V2_X"));
+        adminProps.setVersion(AdminVersion.valueOf(adminVersion));
 
         XxlJobExecutorProperties execProps = new XxlJobExecutorProperties();
         execProps.setAppname("xxl-job-real-test-" + System.currentTimeMillis());
