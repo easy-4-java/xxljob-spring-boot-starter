@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -129,7 +130,7 @@ public class MockXxlJobAdminServer implements AutoCloseable {
 
     private Map<String, String> parseFormBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody()) {
-            String body = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+            String body = new String(readAllBytes(is), StandardCharsets.UTF_8);
             Map<String, String> map = new LinkedHashMap<>();
             if (body.isEmpty()) {
                 return map;
@@ -301,5 +302,18 @@ public class MockXxlJobAdminServer implements AutoCloseable {
             }
             sendJson(exchange, 200, "{\"code\":200,\"msg\":\"ok\"}");
         }
+    }
+
+    /**
+     * 读取 InputStream 全部字节（Java 8 无 {@link InputStream#readAllBytes()}）。
+     */
+    private static byte[] readAllBytes(InputStream is) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        byte[] chunk = new byte[4096];
+        int read;
+        while ((read = is.read(chunk)) != -1) {
+            buffer.write(chunk, 0, read);
+        }
+        return buffer.toByteArray();
     }
 }
