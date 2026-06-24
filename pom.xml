@@ -6,14 +6,14 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.0.13</version>
+		<version>3.3.6</version>
 		<relativePath />
 	</parent>
 
 	<groupId>io.github.hiwepy</groupId>
 	<artifactId>xxljob-spring-boot-starter</artifactId>
-	<description>Spring Boot Starter For XXL-Job (line 3.0.x; SB 3.0.13; JDK 17; core 3.0.0; executor API regist)</description>
-	<version>3.0.x.20260624-SNAPSHOT</version>
+	<description>Spring Boot Starter For XXL-Job (line 3.3.x; SB 3.3.6; JDK 17; core 3.3.2; executor API registry)</description>
+	<version>3.3.x.20260624-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<url>https://github.com/hiwepy/${project.artifactId}</url>
 	<packaging>jar</packaging>
@@ -352,8 +352,8 @@
 		<skipTests>false</skipTests>
 		<unirest-java.version>3.14.5</unirest-java.version>
 		<fastjson2.version>2.0.57</fastjson2.version>
-		<xxl-job.version>3.0.0</xxl-job.version>
-		<xxl.job.executor.api>regist</xxl.job.executor.api>
+		<xxl-job.version>3.3.2</xxl-job.version>
+		<xxl.job.executor.api>registry</xxl.job.executor.api>
 		<maven.version>3.6.3</maven.version>
 		<maven-gpg-plugin.version>3.2.7</maven-gpg-plugin.version>
 		<maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
