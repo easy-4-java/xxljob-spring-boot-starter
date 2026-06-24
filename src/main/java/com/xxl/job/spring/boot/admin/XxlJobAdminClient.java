@@ -19,7 +19,7 @@ public interface XxlJobAdminClient {
     AdminVersion version();
 
     /**
-     * 是否为 v3 admin。
+     * 是否为完整 V3 admin API（3.3.0+）。
      */
     boolean isV3();
 

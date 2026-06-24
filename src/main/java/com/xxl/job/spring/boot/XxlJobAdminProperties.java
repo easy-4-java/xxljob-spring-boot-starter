@@ -32,8 +32,11 @@ public class XxlJobAdminProperties {
 
     /**
      * Admin Web API 协议版本（按路径选，非 admin Maven 版本号）。
-     * 默认 V2_X：官方 xxl-job-admin 2.x 及 3.0.0 均使用 /login、/jobgroup/save 等 V2 路径。
-     * V3_X：starter 自定义路径（/auth/doLogin 等），官方 3.0.0 源码中不存在。
+     * <ul>
+     *   <li>V2_X（默认）：admin 2.x / 3.0.0 / 3.1.x</li>
+     *   <li>V3_2_X：admin 3.2.0 混合协议（登录 V3 + CRUD V2）</li>
+     *   <li>V3_X：admin 3.3.0+ 完整 V3 API</li>
+     * </ul>
      */
     private AdminVersion version = AdminVersion.V2_X;
 

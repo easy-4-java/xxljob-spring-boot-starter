@@ -20,6 +20,7 @@ import com.alibaba.fastjson2.JSONObject;
 import com.xxl.job.core.biz.model.ReturnT;
 import com.xxl.job.spring.boot.admin.XxlJobAdminClient;
 import com.xxl.job.spring.boot.admin.XxlJobAdminHttpResponse;
+import com.xxl.job.spring.boot.admin.XxlJobAdminPageListAdapter;
 import com.xxl.job.spring.boot.model.XxlJobGroup;
 import com.xxl.job.spring.boot.model.XxlJobGroupList;
 import com.xxl.job.spring.boot.model.XxlJobInfo;
@@ -65,10 +66,6 @@ public class XxlJobTemplate {
 				properties, adminProperties, executorProperties);
 	}
 
-	private boolean isV3() {
-		return adminClient.isV3();
-	}
-
 	// ======================== 认证 ========================
 
 	/**
@@ -89,12 +86,11 @@ public class XxlJobTemplate {
 
 	// ======================== v2/v3 参数差异 ========================
 
+	/**
+	 * 按版本写入主键参数（V3 用 ids[]，V2/V3_2 用 id）。
+	 */
 	private void putIdParam(Map<String, Object> paramMap, Integer id) {
-		if (isV3()) {
-			paramMap.put("ids[]", String.valueOf(id));
-		} else {
-			paramMap.put("id", id);
-		}
+		XxlJobAdminPageListAdapter.putIdParam(paramMap, id, adminClient.version());
 	}
 
 	// ======================== 响应解析 ========================
@@ -122,19 +118,6 @@ public class XxlJobTemplate {
 		return new ReturnT<>(code, msg);
 	}
 
-	private <T> ReturnT<T> parsePageListResult(String body, Class<T> clazz) {
-		JSONObject json = JSON.parseObject(body);
-		if (json.containsKey("code") && json.containsKey("data")) {
-			String inner = json.getString("data");
-			if (inner != null) {
-				T result = JSON.parseObject(inner, clazz);
-				return new ReturnT<>(result);
-			}
-		}
-		T result = JSON.parseObject(body, clazz);
-		return new ReturnT<>(result);
-	}
-
 	// ======================== 业务 API ========================
 
 	public ReturnT<XxlJobGroupList> jobInfoGroupList(int start, int length) {
@@ -142,15 +125,12 @@ public class XxlJobTemplate {
 	}
 
 	public ReturnT<XxlJobGroupList> jobInfoGroupList(int start, int length, String appname, String title) {
-		Map<String, Object> p = new HashMap<>(4);
-		p.put("start", Math.max(0, start));
-		p.put("length", Math.min(length, 5));
-		p.put("appname", appname);
-		p.put("title", title);
+		Map<String, Object> p = XxlJobAdminPageListAdapter.buildJobGroupPageParams(
+				start, Math.min(length, 5), appname, title, adminClient.version());
 		try {
 			XxlJobAdminHttpResponse r = adminClient.postForm(XxlJobConstants.JOBGROUP_PAGELIST, p);
 			if (r.isSuccess() && r.isJson()) {
-				return parsePageListResult(r.getBody(), XxlJobGroupList.class);
+				return XxlJobAdminPageListAdapter.parseJobGroupList(r.getBody(), adminClient.version());
 			}
 			return new ReturnT<>(ReturnT.FAIL_CODE, r.errorMessage());
 		} catch (Exception e) {
@@ -201,18 +181,13 @@ public class XxlJobTemplate {
 		if (Objects.isNull(jobGroup)) {
 			return new ReturnT<>(ReturnT.FAIL_CODE, "任务执行器主键ID不能为空");
 		}
-		Map<String, Object> p = new HashMap<>(7);
-		p.put("start", Math.max(0, start));
-		p.put("length", Math.max(length, 5));
-		p.put("jobGroup", jobGroup);
-		p.put("triggerStatus", triggerStatus);
-		p.put("jobDesc", jobDesc);
-		p.put("executorHandler", executorHandler);
-		p.put("author", author);
+		Map<String, Object> p = XxlJobAdminPageListAdapter.buildJobInfoPageParams(
+				start, Math.max(length, 5), jobGroup, triggerStatus, jobDesc, executorHandler, author,
+				adminClient.version());
 		try {
 			XxlJobAdminHttpResponse r = adminClient.postForm(XxlJobConstants.JOBINFO_PAGELIST, p);
 			if (r.isSuccess() && r.isJson()) {
-				return parsePageListResult(r.getBody(), XxlJobInfoList.class);
+				return XxlJobAdminPageListAdapter.parseJobInfoList(r.getBody(), adminClient.version());
 			}
 			return new ReturnT<>(ReturnT.FAIL_CODE, r.errorMessage());
 		} catch (Exception e) {

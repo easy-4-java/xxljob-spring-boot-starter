@@ -99,8 +99,15 @@ public class MockXxlJobAdminServer implements AutoCloseable {
         try (OutputStream os = exchange.getResponseBody()) { os.write(bytes); }
     }
 
-    // 生成 pageList JSON（直接用字符串拼接，避免 fastjson2 null 序列化问题）
-    private String pageListJson(List<String> itemJsons) {
+    // 生成 V3 pageList JSON（PageModel: total + data）
+    private String v3PageListJson(List<String> itemJsons) {
+        String items = String.join(",", itemJsons);
+        return "{\"code\":200,\"msg\":null,\"data\":{\"total\":" + itemJsons.size()
+                + ",\"data\":[" + items + "]}}";
+    }
+
+    // 生成 V2 pageList JSON（DataTables: recordsTotal/recordsFiltered/data）
+    private String v2PageListJson(List<String> itemJsons) {
         String items = String.join(",", itemJsons);
         return "{\"code\":200,\"msg\":null,\"data\":{\"recordsTotal\":" + itemJsons.size()
                 + ",\"recordsFiltered\":" + itemJsons.size()
@@ -149,7 +156,7 @@ public class MockXxlJobAdminServer implements AutoCloseable {
                             + ",\"addressType\":0}");
                 }
             }
-            sendJson(exchange, 200, pageListJson(items));
+            sendJson(exchange, 200, v3PageListJson(items));
         }
     }
 
@@ -177,7 +184,7 @@ public class MockXxlJobAdminServer implements AutoCloseable {
                         + ",\"executorHandler\":\"" + e.getKey() + "\""
                         + ",\"jobGroup\":0,\"jobDesc\":\"\"}");
             }
-            sendJson(exchange, 200, pageListJson(items));
+            sendJson(exchange, 200, v3PageListJson(items));
         }
     }
 

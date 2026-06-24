@@ -53,7 +53,24 @@ public class XxlJobAdminCookieStore {
     }
 
     /**
-     * 构建请求 Cookie 头。
+     * 是否已存储指定名称的登录 Cookie。
+     */
+    public boolean hasLoginCookie(String name) {
+        return name != null && cookies.containsKey(name);
+    }
+
+    /**
+     * 构建仅含指定名称的请求 Cookie 头；未命中时回退为全部 Cookie。
+     */
+    public String buildCookieHeader(String preferredName) {
+        if (preferredName != null && cookies.containsKey(preferredName)) {
+            return preferredName + "=" + cookies.get(preferredName);
+        }
+        return buildCookieHeader();
+    }
+
+    /**
+     * 构建请求 Cookie 头（全部已存 Cookie）。
      */
     public String buildCookieHeader() {
         if (cookies.isEmpty()) {

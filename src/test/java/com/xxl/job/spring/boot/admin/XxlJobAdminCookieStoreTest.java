@@ -1,5 +1,6 @@
 package com.xxl.job.spring.boot.admin;
 
+import com.xxl.job.spring.boot.XxlJobConstants;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +49,28 @@ class XxlJobAdminCookieStoreTest {
         store.clear();
         assertThat(store.isEmpty()).isTrue();
         assertThat(store.buildCookieHeader()).isNull();
+    }
+
+    @Test
+    @DisplayName("buildCookieHeader(preferredName) 应优先返回指定 Cookie")
+    void shouldPreferNamedCookie() {
+        XxlJobAdminCookieStore store = new XxlJobAdminCookieStore();
+        store.absorbOne("XXL_JOB_LOGIN_IDENTITY=v2; Path=/");
+        store.absorbOne("xxl_job_login_token=v3; Path=/; HttpOnly");
+
+        assertThat(store.buildCookieHeader(XxlJobConstants.COOKIE_LOGIN_TOKEN))
+                .isEqualTo("xxl_job_login_token=v3");
+        assertThat(store.buildCookieHeader(XxlJobConstants.COOKIE_LOGIN_IDENTITY))
+                .isEqualTo("XXL_JOB_LOGIN_IDENTITY=v2");
+    }
+
+    @Test
+    @DisplayName("hasLoginCookie 应识别版本对应 Cookie")
+    void shouldDetectLoginCookieByName() {
+        XxlJobAdminCookieStore store = new XxlJobAdminCookieStore();
+        store.absorbOne("xxl_job_login_token=token; Path=/");
+        assertThat(store.hasLoginCookie("xxl_job_login_token")).isTrue();
+        assertThat(store.hasLoginCookie("XXL_JOB_LOGIN_IDENTITY")).isFalse();
     }
 
 }

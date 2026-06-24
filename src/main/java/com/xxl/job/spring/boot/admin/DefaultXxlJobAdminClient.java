@@ -46,7 +46,7 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
 
     @Override
     public boolean isV3() {
-        return version() == AdminVersion.V3_X;
+        return version().usesV3FullApi();
     }
 
     @Override
@@ -60,9 +60,12 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
             log.info("xxl-job login response: status={}, body={}", response.getStatus(), safeBody(response));
             if (response.isSuccess()) {
                 absorbCookies(response);
-                authenticated = true;
-                log.info("xxl-job login SUCCESS");
-                return true;
+                authenticated = cookieStore.hasLoginCookie(version().loginCookieName());
+                if (authenticated) {
+                    log.info("xxl-job login SUCCESS (cookie={})", version().loginCookieName());
+                    return true;
+                }
+                log.warn("xxl-job login HTTP ok but missing cookie: {}", version().loginCookieName());
             }
             log.error("xxl-job login FAIL: status={}", response.getStatus());
             authenticated = false;
@@ -138,7 +141,7 @@ public class DefaultXxlJobAdminClient implements XxlJobAdminClient {
         HttpRequestWithBody req = unirestInstance.post(url)
                 .header(XxlJobConstants.XXL_RPC_ACCESS_TOKEN, properties.getAccessToken());
         if (attachCookies) {
-            String cookieHeader = cookieStore.buildCookieHeader();
+            String cookieHeader = cookieStore.buildCookieHeader(version().loginCookieName());
             if (cookieHeader != null && !cookieHeader.isEmpty()) {
                 req.header("Cookie", cookieHeader);
             }
