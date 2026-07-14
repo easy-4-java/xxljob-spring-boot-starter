@@ -32,12 +32,19 @@ Maven 坐标：`{分支前缀}.{日期}-SNAPSHOT`，例如 `3.0.x.20260624-SNAPS
 
 | Git 分支 | Maven 坐标示例 | Spring Boot | JDK | xxl-job-core | 执行器 API |
 |----------|----------------|-------------|-----|--------------|------------|
-| `2.7.x` | `2.7.x.20260624-SNAPSHOT` | 2.7.18 | 11 | 2.5.0 | `registJobHandler` |
+| `2.3.x` | `2.3.x.{date}-SNAPSHOT` | 2.3.12.RELEASE | 8 | 2.5.0 | `registJobHandler` |
+| `2.4.x` | `2.4.x.{date}-SNAPSHOT` | 2.4.13 | 8 | 2.5.0 | `registJobHandler` |
+| `2.5.x` | `2.5.x.{date}-SNAPSHOT` | 2.5.15 | 8 | 2.5.0 | `registJobHandler` |
+| `2.6.x` | `2.6.x.{date}-SNAPSHOT` | 2.6.15 | 8 | 2.5.0 | `registJobHandler` |
+| `2.7.x` | `2.7.x.20260624-SNAPSHOT` | 2.7.18 | 8 | 2.5.0 | `registJobHandler` |
 | **`3.0.x`** | **`3.0.x.{date}-SNAPSHOT`** | **3.0.13** | 17 | **3.0.0** | `registJobHandler` |
 | `3.1.x` | `3.1.x.{date}-SNAPSHOT` | 3.1.12 | 17 | 3.1.1 | `registJobHandler` |
 | `3.2.x` | `3.2.x.{date}-SNAPSHOT` | 3.2.12 | 17 | 3.2.0 | `registJobHandler` |
-| `3.3.x` | `3.3.x.{date}-SNAPSHOT` | 3.3.6 | 17 | 3.3.2 | `registryJobHandler` |
-| `3.4.x` | `3.4.x.{date}-SNAPSHOT` | 3.4.2 | 17 | 3.4.2 | `registryJobHandler` |
+| `3.3.x` | `3.3.x.{date}-SNAPSHOT` | 3.3.13 | 17 | 3.3.2 | `registryJobHandler` |
+| `3.4.x` | `3.4.x.{date}-SNAPSHOT` | 3.4.13 | 17 | 3.4.2 | `registryJobHandler` |
+| `3.5.x` | `3.5.x.{date}-SNAPSHOT` | 3.5.16 | 17 | 3.4.2 | `registryJobHandler` |
+| `4.0.x` | `4.0.x.{date}-SNAPSHOT` | 4.0.7 | 21 | 3.4.2 | `registryJobHandler` |
+| `4.1.x` | `4.1.x.{date}-SNAPSHOT` | 4.1.0 | 21 | 3.4.2 | `registryJobHandler` |
 
 > **两层版本语义**：Starter 分支决定接入方 Spring Boot 线；`xxl-job-core` 决定执行器 RPC；`AdminVersion`（Nacos）决定 Admin HTTP Web API 路径，三者独立配置。
 
@@ -84,7 +91,7 @@ Maven 坐标：`{分支前缀}.{日期}-SNAPSHOT`，例如 `3.0.x.20260624-SNAPS
 </dependency>
 ```
 
-**2.7.x 遗留线（Spring Boot 2.7 / JDK 11 / core 2.5.0）**
+**2.7.x 线（Spring Boot 2.7 / JDK 8 / core 2.5.0）**
 
 ```xml
 <dependency>

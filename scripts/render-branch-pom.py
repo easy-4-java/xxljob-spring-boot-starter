@@ -7,9 +7,9 @@
 Spring Boot parent、编译 JDK、xxl-job-core 随 Git 分支固定。
 
 JDK 基线:
-  2.3.x -> JDK 8
-  2.7.x -> JDK 11
-  3.0.x-3.4.x -> JDK 17
+  2.x -> JDK 8
+  3.x -> JDK 17
+  4.x -> JDK 21
 
 执行器 API（源码侧按分支维护，脚本仅写入文档属性）:
   regist   -> core 2.5.0 ~ 3.2.x（registJobHandler）
@@ -50,12 +50,18 @@ EXECUTOR_JAVA = [
 # (boot parent, java.version, version prefix, xxl-job-core, executor API hint, use maven.compiler.release)
 MATRIX = {
     "2.3.x": ("2.3.12.RELEASE", "1.8", "2.3.x", "2.5.0", "regist", False),
-    "2.7.x": ("2.7.18", "11", "2.7.x", "2.5.0", "regist", True),
+    "2.4.x": ("2.4.13", "1.8", "2.4.x", "2.5.0", "regist", False),
+    "2.5.x": ("2.5.15", "1.8", "2.5.x", "2.5.0", "regist", False),
+    "2.6.x": ("2.6.15", "1.8", "2.6.x", "2.5.0", "regist", False),
+    "2.7.x": ("2.7.18", "1.8", "2.7.x", "2.5.0", "regist", False),
     "3.0.x": ("3.0.13", "17", "3.0.x", "3.0.0", "regist", True),
     "3.1.x": ("3.1.12", "17", "3.1.x", "3.1.1", "regist", True),
     "3.2.x": ("3.2.12", "17", "3.2.x", "3.2.0", "regist", True),
-    "3.3.x": ("3.3.6", "17", "3.3.x", "3.3.2", "registry", True),
-    "3.4.x": ("3.4.2", "17", "3.4.x", "3.4.2", "registry", True),
+    "3.3.x": ("3.3.13", "17", "3.3.x", "3.3.2", "registry", True),
+    "3.4.x": ("3.4.13", "17", "3.4.x", "3.4.2", "registry", True),
+    "3.5.x": ("3.5.16", "17", "3.5.x", "3.4.2", "registry", True),
+    "4.0.x": ("4.0.7", "21", "4.0.x", "3.4.2", "registry", True),
+    "4.1.x": ("4.1.0", "21", "4.1.x", "3.4.2", "registry", True),
 }
 
 
