@@ -413,9 +413,9 @@
 			</dependency>
 
 	<dependency>
-t	<groupId>io.github.hiwepy</groupId>
-t	<artifactId>xxljob-extension-spring</artifactId>
-t	<version>3.0.x.20260630-SNAPSHOT</version>
+	<groupId>io.github.hiwepy</groupId>
+	<artifactId>xxljob-extension-spring</artifactId>
+	<version>3.0.x.20260630-SNAPSHOT</version>
 	</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -526,9 +526,9 @@ t	<version>3.0.x.20260630-SNAPSHOT</version>
 		</dependency>
 
 	<dependency>
-t	<groupId>io.github.hiwepy</groupId>
-t	<artifactId>xxljob-extension-spring</artifactId>
-t	<version>3.0.x.20260630-SNAPSHOT</version>
+	<groupId>io.github.hiwepy</groupId>
+	<artifactId>xxljob-extension-spring</artifactId>
+	<version>3.0.x.20260630-SNAPSHOT</version>
 	</dependency>
 	</dependencies>
 
