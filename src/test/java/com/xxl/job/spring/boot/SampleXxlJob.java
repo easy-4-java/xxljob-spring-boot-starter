@@ -2,7 +2,7 @@ package com.xxl.job.spring.boot;
 
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
-import com.xxl.job.spring.boot.annotation.XxlJobCron;
+import com.xxl.job.core.annotation.XxlJobCron;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
