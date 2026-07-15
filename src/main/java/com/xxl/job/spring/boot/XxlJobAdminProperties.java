@@ -1,9 +1,9 @@
 package com.xxl.job.spring.boot;
 
-import lombok.Data;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.xxl.job.core.AdminVersion;
 
-@ConfigurationProperties(XxlJobAdminProperties.PREFIX)
+import lombok.Data;
+
 @Data
 public class XxlJobAdminProperties {
 
