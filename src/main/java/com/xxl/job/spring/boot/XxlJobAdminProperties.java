@@ -1,9 +1,9 @@
 package com.xxl.job.spring.boot;
 
-import lombok.Data;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.xxl.job.core.AdminVersion;
 
-@ConfigurationProperties(XxlJobAdminProperties.PREFIX)
+import lombok.Data;
+
 @Data
 public class XxlJobAdminProperties {
 
@@ -25,15 +25,19 @@ public class XxlJobAdminProperties {
     private String password;
 
     /**
-     * 调度中心登录状态保持
+     * 调度中心登录状态保持。
+     * 默认 false：remember-me Cookie 的 Max-Age=2147483647 会导致 Apache HttpClient 解析失败。
      */
-    private boolean remember;
+    private boolean remember = false;
 
     /**
-     * xxl-job-admin 版本，默认 V3_X
-     * V2_X: admin 2.x, 路径 /login, /jobgroup/save, /jobinfo/add, 参数 id
-     * V3_X: admin 3.x, 路径 /auth/doLogin, /jobgroup/insert, /jobinfo/insert, 参数 ids[]
+     * Admin Web API 协议版本（按路径选，非 admin Maven 版本号）。
+     * <ul>
+     *   <li>V2_X（默认）：admin 2.x / 3.0.0 / 3.1.x</li>
+     *   <li>V3_2_X：admin 3.2.0 混合协议（登录 V3 + CRUD V2）</li>
+     *   <li>V3_X：admin 3.3.0+ 完整 V3 API</li>
+     * </ul>
      */
-    private AdminVersion version = AdminVersion.V3_X;
+    private AdminVersion version = AdminVersion.V2_X;
 
 }
