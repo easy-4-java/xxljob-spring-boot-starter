@@ -354,7 +354,14 @@
 	</repositories>
 
 	<properties>
+		<java.version>21</java.version>
+		<xxl-job.version>3.4.2</xxl-job.version>
+		<spring-boot.version>4.0.0</spring-boot.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	<java.version>21</java.version>
+	<xxl-job.version>3.4.2</xxl-job.version>
+	<spring-boot.version>4.0.0</spring-boot.version>
+
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		
 		<maven.version>3.6.3</maven.version>
@@ -405,11 +412,11 @@
 			    <version>${xxl-job.version}</version>
 			</dependency>
 
-tt<dependency>
-ttt<groupId>io.github.hiwepy</groupId>
-ttt<artifactId>xxljob-extension-spring</artifactId>
-ttt<version>3.0.x.20260630-SNAPSHOT</version>
-tt</dependency>
+	<dependency>
+t	<groupId>io.github.hiwepy</groupId>
+t	<artifactId>xxljob-extension-spring</artifactId>
+t	<version>3.0.x.20260630-SNAPSHOT</version>
+	</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -518,11 +525,11 @@ tt</dependency>
 			<scope>provided</scope>
 		</dependency>
 
-tt<dependency>
-ttt<groupId>io.github.hiwepy</groupId>
-ttt<artifactId>xxljob-extension-spring</artifactId>
-ttt<version>3.0.x.20260630-SNAPSHOT</version>
-tt</dependency>
+	<dependency>
+t	<groupId>io.github.hiwepy</groupId>
+t	<artifactId>xxljob-extension-spring</artifactId>
+t	<version>3.0.x.20260630-SNAPSHOT</version>
+	</dependency>
 	</dependencies>
 
 <distributionManagement><repository><id>2624322-release-6F6h6R</id><name>Maven Release Repository</name><url>https://packages.aliyun.com/6927b116e6c3e0425dbdf60d/maven/2624322-release-6f6h6r</url><releases><enabled>true</enabled></releases><snapshots><enabled>false</enabled></snapshots></repository><snapshotRepository><id>2624322-snapshot-3EoOv3</id><name>Maven Snapshot Repository</name><url>https://packages.aliyun.com/6927b116e6c3e0425dbdf60d/maven/2624322-snapshot-3eoov3</url><releases><enabled>false</enabled></releases><snapshots><enabled>true</enabled></snapshots><uniqueVersion>true</uniqueVersion></snapshotRepository></distributionManagement></project>
