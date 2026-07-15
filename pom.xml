@@ -5,14 +5,14 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.0.1</version>
+		<version>3.5.14</version>
 		<relativePath /> 
 	</parent>
 
-	<groupId>io.github.hiwepy</groupId>
-	<artifactId>xxljob-spring-boot-starter</artifactId>
+		<groupId>io.github.hiwepy</groupId>
+		<artifactId>xxljob-spring-boot-starter</artifactId>
 	<description>Spring Boot Starter For XXL-Job</description>
-	<version>3.0.x.20260603-SNAPSHOT</version>
+		<version>3.0.x.20260603-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<url>https://github.com/hiwepy/${project.artifactId}</url>
 	<packaging>jar</packaging>
@@ -354,7 +354,17 @@
 	</repositories>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<java.version>17</java.version>
+		<xxl-job.version>3.4.2</xxl-job.version>
+		<spring-boot.version>3.5.14</spring-boot.version>
+		<spring-framework.version>6.2.10</spring-framework.version>
+		<micrometer.version>1.14.14</micrometer.version>
+		<slf4j.version>2.0.18</slf4j.version>
+		<lombok.version>1.18.30</lombok.version>
+		<junit.version>5.10.2</junit.version>
+		<fastjson2.version>2.0.57</fastjson2.version>
+		<unirest-java.version>3.14.5</unirest-java.version>
+		<xxl-job-core.version>3.4.2</xxl-job-core.version>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		
 		<maven.version>3.6.3</maven.version>
@@ -405,11 +415,11 @@
 			    <version>${xxl-job.version}</version>
 			</dependency>
 
-tt<dependency>
-ttt<groupId>io.github.hiwepy</groupId>
-ttt<artifactId>xxljob-extension-spring</artifactId>
-ttt<version>3.0.x.20260630-SNAPSHOT</version>
-tt</dependency>
+			<dependency>
+		<groupId>io.github.hiwepy</groupId>
+		<artifactId>xxljob-extension-spring</artifactId>
+		<version>3.0.x.20260630-SNAPSHOT</version>
+		</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -489,6 +499,7 @@ tt</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-aop</artifactId>
+			<version>${spring-boot.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.springframework.boot</groupId>
@@ -518,11 +529,11 @@ tt</dependency>
 			<scope>provided</scope>
 		</dependency>
 
-tt<dependency>
-ttt<groupId>io.github.hiwepy</groupId>
-ttt<artifactId>xxljob-extension-spring</artifactId>
-ttt<version>3.0.x.20260630-SNAPSHOT</version>
-tt</dependency>
+			<dependency>
+		<groupId>io.github.hiwepy</groupId>
+		<artifactId>xxljob-extension-spring</artifactId>
+		<version>3.0.x.20260630-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 
 <distributionManagement><repository><id>2624322-release-6F6h6R</id><name>Maven Release Repository</name><url>https://packages.aliyun.com/6927b116e6c3e0425dbdf60d/maven/2624322-release-6f6h6r</url><releases><enabled>true</enabled></releases><snapshots><enabled>false</enabled></snapshots></repository><snapshotRepository><id>2624322-snapshot-3EoOv3</id><name>Maven Snapshot Repository</name><url>https://packages.aliyun.com/6927b116e6c3e0425dbdf60d/maven/2624322-snapshot-3eoov3</url><releases><enabled>false</enabled></releases><snapshots><enabled>true</enabled></snapshots><uniqueVersion>true</uniqueVersion></snapshotRepository></distributionManagement></project>
