@@ -12,8 +12,8 @@
 
 	<groupId>io.github.hiwepy</groupId>
 	<artifactId>xxljob-spring-boot-starter</artifactId>
-	<description>Spring Boot Starter For XXL-Job (line 2.3.x; SB 2.3.12.RELEASE; JDK 1.8; core 2.5.0; executor API regist)</description>
-	<version>2.3.x.20260624-SNAPSHOT</version>
+	<description>Spring Boot Starter For XXL-Job (line 2.7.x; SB 2.7.18; JDK 1.8; core 2.5.0; executor API regist)</description>
+	<version>2.7.x.20260624-SNAPSHOT</version>
 	<name>${project.groupId}:${project.artifactId}</name>
 	<url>https://github.com/hiwepy/${project.artifactId}</url>
 	<packaging>jar</packaging>
@@ -452,6 +452,11 @@
 			<groupId>com.konghq</groupId>
 			<artifactId>unirest-java</artifactId>
 			<version>${unirest-java.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.github.hiwepy</groupId>
+			<artifactId>xxljob-extension-spring</artifactId>
+			<version>1.0.x.20260630-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

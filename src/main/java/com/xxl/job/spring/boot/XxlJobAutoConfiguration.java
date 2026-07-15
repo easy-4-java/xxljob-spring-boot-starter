@@ -1,10 +1,14 @@
 package com.xxl.job.spring.boot;
 
 
+import com.xxl.job.core.XxlJobTemplate;
+import com.xxl.job.core.admin.DefaultXxlJobAdminClient;
+import com.xxl.job.core.admin.XxlJobAdminClient;
+import com.xxl.job.core.config.XxlJobAdminConfig;
 import com.xxl.job.core.executor.XxlJobExecutor;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
-import com.xxl.job.spring.boot.admin.DefaultXxlJobAdminClient;
-import com.xxl.job.spring.boot.admin.XxlJobAdminClient;
+import com.xxl.job.spring.XxlJobAutoBindingAndMetricsSpringExecutor;
+import com.xxl.job.spring.XxlJobAutoBindingSpringExecutor;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import kong.unirest.Unirest;
@@ -14,6 +18,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -30,10 +35,7 @@ import java.util.stream.Collectors;
 @Configuration
 @ConditionalOnClass(XxlJobExecutor.class)
 @EnableConfigurationProperties({
-	XxlJobProperties.class,
-	XxlJobAdminProperties.class,
 	XxlJobAdminCookieProperties.class,
-	XxlJobExecutorProperties.class,
 	XxlJobMetricsProperties.class
 })
 @Slf4j
@@ -41,7 +43,7 @@ public class XxlJobAutoConfiguration {
 
 	private SSLContext createTrustAllSslContext() {
 		try {
-			TrustManager[] trustAllCerts = new TrustManager[]{
+			TrustManager[] trustAllCreds = new TrustManager[]{
 				new X509TrustManager() {
 					@Override
 					public X509Certificate[] getAcceptedIssuers() {
@@ -54,12 +56,33 @@ public class XxlJobAutoConfiguration {
 				}
 			};
 			SSLContext sslContext = SSLContext.getInstance("TLS");
-			sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+			sslContext.init(null, trustAllCreds, new java.security.SecureRandom());
 			return sslContext;
 		} catch (Exception e) {
 			log.error("Failed to create trust-all SSL context", e);
 			return null;
 		}
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	@ConfigurationProperties(XxlJobProperties.PREFIX)
+	public XxlJobProperties xxlJobProperties() {
+		return new XxlJobProperties();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	@ConfigurationProperties(XxlJobAdminProperties.PREFIX)
+	public XxlJobAdminProperties xxlJobAdminProperties() {
+		return new XxlJobAdminProperties();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	@ConfigurationProperties(XxlJobExecutorProperties.PREFIX)
+	public XxlJobExecutorProperties xxlJobExecutorProperties() {
+		return new XxlJobExecutorProperties();
 	}
 
 	@Bean(destroyMethod = "close")
@@ -79,6 +102,20 @@ public class XxlJobAutoConfiguration {
 		return instance;
 	}
 
+	/**
+	 * 组装 core 的 {@link XxlJobAdminConfig}（Properties → Config 适配）。
+	 */
+	private XxlJobAdminConfig toAdminConfig(XxlJobProperties properties, XxlJobAdminProperties adminProperties) {
+		return XxlJobAdminConfig.builder()
+				.accessToken(properties.getAccessToken())
+				.addresses(adminProperties.getAddresses())
+				.username(adminProperties.getUsername())
+				.password(adminProperties.getPassword())
+				.remember(adminProperties.isRemember())
+				.version(adminProperties.getVersion())
+				.build();
+	}
+
 	@Bean
 	@ConditionalOnMissingBean
 	public XxlJobAdminClient xxlJobAdminClient(
@@ -86,7 +123,7 @@ public class XxlJobAutoConfiguration {
 			XxlJobProperties properties,
 			XxlJobAdminProperties adminProperties) {
 		UnirestInstance instance = unirestProvider.getIfAvailable(this::unirestInstance);
-		return new DefaultXxlJobAdminClient(instance, properties, adminProperties);
+		return new DefaultXxlJobAdminClient(instance, toAdminConfig(properties, adminProperties));
 	}
 
 	@Bean
@@ -94,11 +131,11 @@ public class XxlJobAutoConfiguration {
 			ObjectProvider<UnirestInstance> unirestProvider,
 			ObjectProvider<XxlJobAdminClient> adminClientProvider,
 			XxlJobProperties properties,
-			XxlJobAdminProperties adminProperties,
-			XxlJobExecutorProperties executorProperties) {
+			XxlJobAdminProperties adminProperties) {
 		XxlJobAdminClient adminClient = adminClientProvider.getIfAvailable(() ->
-				new DefaultXxlJobAdminClient(unirestProvider.getIfAvailable(this::unirestInstance), properties, adminProperties));
-		return new XxlJobTemplate(adminClient, properties, adminProperties, executorProperties);
+				new DefaultXxlJobAdminClient(unirestProvider.getIfAvailable(this::unirestInstance),
+						toAdminConfig(properties, adminProperties)));
+		return new XxlJobTemplate(adminClient);
 	}
 
 	@Bean

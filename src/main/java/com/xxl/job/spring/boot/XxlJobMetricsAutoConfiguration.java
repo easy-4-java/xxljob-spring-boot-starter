@@ -2,7 +2,7 @@ package com.xxl.job.spring.boot;
 
 import com.xxl.job.core.executor.XxlJobExecutor;
 import com.xxl.job.core.executor.impl.XxlJobSpringExecutor;
-import com.xxl.job.spring.boot.metrics.XxlJobMetrics;
+import com.xxl.job.spring.metrics.XxlJobMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration;
@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Lazy;
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnClass({ MeterRegistry.class, XxlJobExecutor.class  })
 @ConditionalOnProperty(prefix = XxlJobMetricsProperties.PREFIX, value = "enabled", havingValue = "true", matchIfMissing = false)
-@EnableConfigurationProperties({ XxlJobProperties.class, XxlJobAdminProperties.class, XxlJobExecutorProperties.class, XxlJobMetricsProperties.class })
+@EnableConfigurationProperties({ XxlJobMetricsProperties.class })
 @Slf4j
 public class XxlJobMetricsAutoConfiguration {
 
