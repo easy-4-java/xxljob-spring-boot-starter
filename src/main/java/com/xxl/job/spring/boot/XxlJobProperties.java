@@ -18,9 +18,7 @@ package com.xxl.job.spring.boot;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(XxlJobProperties.PREFIX)
 @Getter
 @Setter
 @ToString
@@ -32,5 +30,5 @@ public class XxlJobProperties {
 	 * 	执行器通讯TOKEN [选填]：非空时启用；
 	 */
 	private String accessToken;
-	
+
 }

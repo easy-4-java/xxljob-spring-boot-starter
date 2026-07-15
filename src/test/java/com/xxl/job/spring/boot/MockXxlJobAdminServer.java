@@ -1,5 +1,8 @@
 package com.xxl.job.spring.boot;
 
+import com.xxl.job.core.AdminVersion;
+import com.xxl.job.core.XxlJobConstants;
+
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -12,7 +15,6 @@ import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +25,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 模拟 xxl-job-admin 的嵌入式 HTTP 服务器，支持 V2_X / V3_2_X / V3_X 多版本协议。
+ * <p>
+ * 测试夹具，留在 starter 的 test 目录供 {@link XxlJobAutoRegistrationTest} 等集成测试使用；
+ * spring 模块 test 中另有同名副本（test 代码不跨 jar 发布）。
  */
 public class MockXxlJobAdminServer implements AutoCloseable {
 
@@ -43,9 +48,6 @@ public class MockXxlJobAdminServer implements AutoCloseable {
         this(port, AdminVersion.V3_X);
     }
 
-    /**
-     * 按 AdminVersion 注册对应登录/CRUD 路径与分页、start/stop 参数约定。
-     */
     public MockXxlJobAdminServer(int port, AdminVersion adminVersion) throws IOException {
         this.adminVersion = adminVersion;
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -101,8 +103,6 @@ public class MockXxlJobAdminServer implements AutoCloseable {
         server.stop(0);
     }
 
-    // ---- 请求日志 ----
-
     public static class XxlJobRequestLog {
         public final String path;
         public final Map<String, String> params;
@@ -125,8 +125,6 @@ public class MockXxlJobAdminServer implements AutoCloseable {
             return "POST " + path + " " + params;
         }
     }
-
-    // ---- 工具 ----
 
     private Map<String, String> parseFormBody(HttpExchange exchange) throws IOException {
         try (InputStream is = exchange.getRequestBody()) {
@@ -185,8 +183,6 @@ public class MockXxlJobAdminServer implements AutoCloseable {
                 + ",\"pages\":" + (itemJsons.isEmpty() ? 0 : 1)
                 + ",\"data\":[" + items + "]}";
     }
-
-    // ---- Handlers ----
 
     class JsonHandler implements HttpHandler {
         private final String json;
@@ -304,9 +300,6 @@ public class MockXxlJobAdminServer implements AutoCloseable {
         }
     }
 
-    /**
-     * 读取 InputStream 全部字节（Java 8 无 {@link InputStream#readAllBytes()}）。
-     */
     private static byte[] readAllBytes(InputStream is) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] chunk = new byte[4096];

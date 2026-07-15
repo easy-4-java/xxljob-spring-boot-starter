@@ -388,6 +388,11 @@
 			    <artifactId>xxl-job-core</artifactId>
 			    <version>${xxl-job.version}</version>
 			</dependency>
+	<dependency>
+t	<groupId>io.github.hiwepy</groupId>
+t	<artifactId>xxljob-extension-spring</artifactId>
+t	<version>2.0.x.20260630-SNAPSHOT</version>
+	</dependency>
 		</dependencies>
 	</dependencyManagement>
 
@@ -481,6 +486,11 @@
 			<artifactId>micrometer-core</artifactId>
 			<scope>provided</scope>
 		</dependency>
+	<dependency>
+t	<groupId>io.github.hiwepy</groupId>
+t	<artifactId>xxljob-extension-spring</artifactId>
+t	<version>2.0.x.20260630-SNAPSHOT</version>
+	</dependency>
 	</dependencies>
 
 </project>
