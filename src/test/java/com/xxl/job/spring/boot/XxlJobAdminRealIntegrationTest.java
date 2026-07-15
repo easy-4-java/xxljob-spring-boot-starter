@@ -1,10 +1,15 @@
 package com.xxl.job.spring.boot;
 
-import com.xxl.job.spring.boot.model.ReturnT;
-import com.xxl.job.spring.boot.model.XxlJobGroup;
-import com.xxl.job.spring.boot.model.XxlJobGroupList;
-import com.xxl.job.spring.boot.model.XxlJobInfo;
-import com.xxl.job.spring.boot.model.XxlJobInfoList;
+import com.xxl.job.core.AdminVersion;
+import com.xxl.job.core.XxlJobTemplate;
+import com.xxl.job.core.admin.DefaultXxlJobAdminClient;
+import com.xxl.job.core.admin.XxlJobAdminClient;
+import com.xxl.job.core.config.XxlJobAdminConfig;
+import com.xxl.job.core.model.ReturnT;
+import com.xxl.job.core.model.XxlJobGroup;
+import com.xxl.job.core.model.XxlJobGroupList;
+import com.xxl.job.core.model.XxlJobInfo;
+import com.xxl.job.core.model.XxlJobInfoList;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -52,10 +57,6 @@ class XxlJobAdminRealIntegrationTest {
         String adminVersion = System.getProperty("xxl.admin.version", System.getenv().getOrDefault("XXL_JOB_ADMIN_VERSION", "V2_X"));
         adminProps.setVersion(AdminVersion.valueOf(adminVersion));
 
-        XxlJobExecutorProperties execProps = new XxlJobExecutorProperties();
-        execProps.setAppname("xxl-job-real-test-" + System.currentTimeMillis());
-        execProps.setTitle("真实测试执行器");
-
         // 直接用 Unirest 创建 template（不走 Spring）
         kong.unirest.UnirestInstance unirest = kong.unirest.Unirest.spawnInstance();
         unirest.config()
@@ -63,7 +64,17 @@ class XxlJobAdminRealIntegrationTest {
                 .enableCookieManagement(true)
                 .followRedirects(true);
 
-        template = new XxlJobTemplate(unirest, props, adminProps, execProps);
+        // 组装 core 的 XxlJobAdminConfig（Properties → Config 适配）
+        XxlJobAdminConfig config = XxlJobAdminConfig.builder()
+                .accessToken(props.getAccessToken())
+                .addresses(adminProps.getAddresses())
+                .username(adminProps.getUsername())
+                .password(adminProps.getPassword())
+                .remember(true)
+                .version(adminProps.getVersion())
+                .build();
+        XxlJobAdminClient adminClient = new DefaultXxlJobAdminClient(unirest, config);
+        template = new XxlJobTemplate(adminClient);
 
         // 先登录
         ReturnT<String> loginResult = template.login(username, password, true);
