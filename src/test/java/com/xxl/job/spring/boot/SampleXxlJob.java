@@ -2,7 +2,7 @@ package com.xxl.job.spring.boot;
 
 import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.annotation.XxlJob;
-import com.xxl.job.spring.boot.annotation.XxlJobCron;
+import com.xxl.job.core.annotation.XxlJobCron;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,10 +22,14 @@ import java.util.concurrent.TimeUnit;
  * XxlJob开发示例（Bean模式）
  *
  * 开发步骤：
+ *      方式一（推荐，100%替代@XxlJob）：
  *      1、任务开发：在Spring Bean实例中，开发Job方法；
- *      2、注解配置：为Job方法添加注解 "@XxlJob(value="自定义jobhandler名称", init = "JobHandler初始化方法", destroy = "JobHandler销毁方法")"，注解value值对应的是调度中心新建任务的JobHandler属性的值。
+ *      2、注解配置：为Job方法添加注解 "@XxlJobCron(value="自定义jobhandler名称", cron="CRON表达式", ...)"；
  *      3、执行日志：需要通过 "XxlJobHelper.log" 打印执行日志；
- *      4、任务结果：默认任务结果为 "成功" 状态，不需要主动设置；如有诉求，比如设置任务结果为失败，可以通过 "XxlJobHelper.handleFail/handleSuccess" 自主设置任务结果；
+ *      4、任务结果：默认任务结果为 "成功" 状态，不需要主动设置；如有诉求，可以通过 "XxlJobHelper.handleFail/handleSuccess" 自主设置任务结果；
+ *
+ *      方式二（兼容旧写法）：
+ *      同时使用 @XxlJob + @XxlJobCron
  *
  * @author xuxueli 2019-12-11 21:52:51
  */
@@ -37,10 +41,9 @@ public class SampleXxlJob {
 
 
     /**
-     * 1、简单任务示例（Bean模式）
+     * 1、简单任务示例（@XxlJobCron 独立使用，不再需要 @XxlJob）
      */
-    @XxlJob("demoJobHandler")
-    @XxlJobCron(cron = "* * 0 * * ?", desc = "简单任务示例（Bean模式）", author = "hiwepy")
+    @XxlJobCron(value = "demoJobHandler", cron = "* * 0 * * ?", desc = "简单任务示例", author = "hiwepy")
     public void demoJobHandler() throws Exception {
         XxlJobHelper.log("XXL-JOB, Hello World.");
 
@@ -53,10 +56,9 @@ public class SampleXxlJob {
 
 
     /**
-     * 2、分片广播任务
+     * 2、分片广播任务（@XxlJobCron 独立使用）
      */
-    @XxlJob("shardingJobHandler")
-    @XxlJobCron(cron = "* * 0 * * ?", desc = "分片广播任务", author = "hiwepy")
+    @XxlJobCron(value = "shardingJobHandler", cron = "* * 0 * * ?", desc = "分片广播任务", author = "hiwepy")
     public void shardingJobHandler() throws Exception {
 
         // 分片参数
@@ -78,7 +80,7 @@ public class SampleXxlJob {
 
 
     /**
-     * 3、命令行任务
+     * 3、命令行任务（兼容旧写法：@XxlJob + @XxlJobCron 组合）
      */
     @XxlJob("commandJobHandler")
     @XxlJobCron(cron = "* * 0 * * ?", desc = "命令行任务", author = "hiwepy")
@@ -245,10 +247,9 @@ public class SampleXxlJob {
     }
 
     /**
-     * 5、生命周期任务示例：任务初始化与销毁时，支持自定义相关逻辑；
+     * 5、生命周期任务示例（@XxlJobCron 独立使用，支持 init/destroy）
      */
-    @XxlJob(value = "demoJobHandler2", init = "init", destroy = "destroy")
-    @XxlJobCron(cron = "* * 0 * * ?", desc = "生命周期任务示例：任务初始化与销毁时，支持自定义相关逻辑", author = "hiwepy")
+    @XxlJobCron(value = "demoJobHandler2", cron = "* * 0 * * ?", desc = "生命周期任务示例", author = "hiwepy", init = "init", destroy = "destroy")
     public void demoJobHandler2() throws Exception {
         XxlJobHelper.log("XXL-JOB, Hello World.");
     }

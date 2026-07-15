@@ -1,47 +1,43 @@
-/*
- * Copyright (c) 2017, hiwepy (https://github.com/hiwepy).
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package com.xxl.job.spring.boot;
 
-import lombok.Data;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import com.xxl.job.core.AdminVersion;
 
-@ConfigurationProperties(XxlJobAdminProperties.PREFIX)
+import lombok.Data;
+
 @Data
 public class XxlJobAdminProperties {
 
-	public static final String PREFIX = "xxl.job.admin";
+    public static final String PREFIX = "xxl.job.admin";
 
-	/**
-	 * 调度中心部署跟地址 [选填]：如调度中心集群部署存在多个地址则用逗号分隔。执行器将会使用该地址进行"执行器心跳注册"和"任务结果回调"；为空则关闭自动注册；
-	 */
-	private String addresses;
+    /**
+     * 调度中心部署跟地址：如调度中心集群部署存在多个地址则用逗号分隔
+     */
+    private String addresses;
 
-	/**
-	 * 调度中心登录账号
-	 */
-	private String username;
+    /**
+     * 调度中心登录账号
+     */
+    private String username;
 
-	/**
-	 * 调度中心登录密码
-	 */
-	private String password;
+    /**
+     * 调度中心登录密码
+     */
+    private String password;
 
-	/**
-	 * 调度中心登录状态保持，开启后xxl-job登录状态不过期，默认：2H
-	 */
-	private boolean remember;
+    /**
+     * 调度中心登录状态保持。
+     * 默认 false：remember-me Cookie 的 Max-Age=2147483647 会导致 Apache HttpClient 解析失败。
+     */
+    private boolean remember = false;
+
+    /**
+     * Admin Web API 协议版本（按路径选，非 admin Maven 版本号）。
+     * <ul>
+     *   <li>V2_X（默认）：admin 2.x / 3.0.0 / 3.1.x</li>
+     *   <li>V3_2_X：admin 3.2.0 混合协议（登录 V3 + CRUD V2）</li>
+     *   <li>V3_X：admin 3.3.0+ 完整 V3 API</li>
+     * </ul>
+     */
+    private AdminVersion version = AdminVersion.V2_X;
 
 }
