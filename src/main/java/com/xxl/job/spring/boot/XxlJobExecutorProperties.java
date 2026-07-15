@@ -15,12 +15,12 @@
  */
 package com.xxl.job.spring.boot;
 
+import com.xxl.job.core.XxlJobConstants;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@ConfigurationProperties(XxlJobExecutorProperties.PREFIX)
 @Getter
 @Setter
 @ToString
