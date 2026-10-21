@@ -511,6 +511,7 @@
                         </additionalClasspathElements>
                         <includes>
                             <include>**/*Test.java</include>
+                            <include>**/*Tests.java</include>
                         <include>**/*_Test.java</include>
                         </includes>
                         <excludes>
